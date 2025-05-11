@@ -1,0 +1,3360 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>即墨课堂评价系统 v9.5</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+        }
+        .evaluation-cell {
+            min-width: 120px;
+        }
+        .evaluation-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0 3px;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .evaluation-btn:hover {
+            transform: scale(1.1);
+        }
+        .evaluation-btn.selected {
+            border: 2px solid #333;
+        }
+        .student-inactive {
+            opacity: 0.5;
+        }
+        .comment-btn {
+            cursor: pointer;
+        }
+        .course-evaluated {
+            background-color: #e8f4ff;
+            position: relative;
+        }
+        /* 新增已评价勾勾样式 */
+        .evaluated-mark {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            color: #10B981;
+            font-size: 12px;
+        }
+        .student-row td {
+            position: relative;
+        }
+        .batch-apply {
+            display: inline-flex;
+            align-items: center;
+            font-size: 14px;
+            color: #666;
+            padding: 4px;
+            border-radius: 4px;
+            background: #f3f4f6;
+            cursor: pointer;
+            margin-left: 8px;
+            transition: all 0.2s;
+            width: 24px;
+            height: 24px;
+            justify-content: center;
+        }
+        .batch-apply:hover {
+            background: #e5e7eb;
+            color: #4b5563;
+        }
+        .course-cell {
+            transition: background-color 0.3s;
+        }
+        .course-cell:hover {
+            background-color: #f0f4ff;
+        }
+        .editable-content {
+            min-height: 24px;
+            border: 1px solid transparent;
+            padding: 3px;
+            border-radius: 4px;
+        }
+        .editable-content:hover {
+            border-color: #ddd;
+            background-color: #f9f9f9;
+        }
+        .editable-content:focus {
+            border-color: #4299e1;
+            background-color: #fff;
+            outline: none;
+        }
+        .goal-row {
+            border-bottom: 1px solid #eee;
+        }
+        .goal-row:last-child {
+            border-bottom: none;
+        }
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            button {
+                display: none !important;
+            }
+            .page-break {
+                page-break-after: always;
+            }
+        }
+        .quick-comment {
+            transition: all 0.2s;
+        }
+        .quick-comment:hover {
+            background-color: #e6f7ff;
+        }
+        .disabled {
+            pointer-events: none;
+            opacity: 0.6;
+        }
+        /* Make the evaluation table horizontally scrollable on small screens */
+        .evaluation-table-container {
+            overflow-x: auto;
+        }
+        .evaluation-table {
+            min-width: 100%;
+        }
+        /* Fixed width columns */
+        .student-col {
+            min-width: 100px; /* Adjust width as needed */
+            white-space: nowrap;
+        }
+        .photo-col {
+            min-width: 100px; /* Adjust width as needed */
+            white-space: nowrap;
+            text-align: center;
+        }
+        .photo-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background-color: #007bff;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .photo-button {
+            position: relative;
+        }
+        .comment-col {
+            min-width: 150px; /* Adjust width as needed */
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-6">
+        <!-- Header -->
+        <div class="flex flex-wrap justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-blue-800">即墨课堂评价系统 v9.5</h1>
+            <div class="space-x-2 flex flex-wrap mt-2 md:mt-0">
+                <button id="helpBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded">
+                    <i class="fas fa-question-circle mr-1"></i> 帮助
+                </button>
+                <button id="settingsBtn" class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded">
+                    <i class="fas fa-cog mr-1"></i> 预留API接口
+                </button>
+            </div>
+        </div>
+
+        <!-- Actions Buttons -->
+        <div class="flex flex-wrap space-x-2 mb-6">
+            <button id="clearBtn" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded">
+                <i class="fas fa-trash-alt mr-1"></i> 清除评价
+            </button>
+            <button id="exportBtn" class="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded">
+                <i class="fas fa-file-export mr-1"></i> 导出数据
+            </button>
+            <button id="exportPhotosBtn" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded">
+                <i class="fas fa-images mr-1"></i> 导出照片
+            </button>
+            <button id="reportBtn" class="bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-1 rounded">
+                <i class="fas fa-chart-bar mr-1"></i> 生成报告
+            </button>
+        </div>
+
+        <!-- 课程表区域 -->
+        <div class="mb-6">
+            <div class="flex justify-between items-center mb-2">
+                <h2 class="text-xl font-semibold text-gray-700">课程表 <span class="text-sm text-gray-500">(仅编辑模式下可修改)</span></h2>
+                <div>
+                    <button id="editScheduleBtn" class="text-blue-500 hover:text-blue-700">
+                        <i class="fas fa-edit"></i> 编辑课程表
+                    </button>
+                    <button id="saveScheduleBtn" class="text-green-500 hover:text-green-700 hidden">
+                        <i class="fas fa-save"></i> 保存
+                    </button>
+                    <button id="cancelEditScheduleBtn" class="text-gray-500 hover:text-gray-700 hidden">
+                        <i class="fas fa-times"></i> 取消
+                    </button>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-4">
+                <div id="courseSchedule" class="overflow-x-auto">
+                    <table class="schedule-table w-full">
+                        <thead>
+                            <tr>
+                                <th>时间段</th>
+                                <th>周一</th>
+                                <th>周二</th>
+                                <th>周三</th>
+                                <th>周四</th>
+                                <th>周五</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scheduleTableBody">
+                            <!-- 动态渲染课程表内容 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <script>
+        let isEditingSchedule = false;
+        // 假设 schedule 结构为 { "周一": [{time:"第一节",course:"语文",teacher:"张三"}, ...], ... }
+        function renderFullScheduleTable() {
+            const allTimes = Array.from(new Set(
+                Object.values(schedule).flat().map(item => item.time)
+            ));
+            allTimes.sort();
+            const days = ["周一","周二","周三","周四","周五"];
+            let html = '';
+            allTimes.forEach(time => {
+                html += `<tr>`;
+                html += `<td>${time}</td>`;
+                days.forEach(day => {
+                    const courseObj = (schedule[day]||[]).find(c=>c.time===time) || {course:'',teacher:''};
+                    if (isEditingSchedule) {
+                        html += `<td>
+                            <div contenteditable="true" class="schedule-editable" data-day="${day}" data-time="${time}" data-field="course">${courseObj.course||''}</div>
+                            <div contenteditable="true" class="schedule-editable text-xs mt-1" data-day="${day}" data-time="${time}" data-field="teacher">${courseObj.teacher||''}</div>
+                        </td>`;
+                    } else {
+                        html += `<td>
+                            <div class="schedule-editable" style="background:#fff;cursor:default;" data-day="${day}" data-time="${time}" data-field="course">${courseObj.course||''}</div>
+                            <div class="schedule-editable text-xs mt-1" style="background:#fff;cursor:default;" data-day="${day}" data-time="${time}" data-field="teacher">${courseObj.teacher||''}</div>
+                        </td>`;
+                    }
+                });
+                html += `</tr>`;
+            });
+            document.getElementById('scheduleTableBody').innerHTML = html;
+            if (isEditingSchedule) setupScheduleEditListeners();
+        }
+        function setupScheduleEditListeners() {
+            document.querySelectorAll('.schedule-editable[contenteditable="true"]').forEach(cell => {
+                cell.onblur = function(e) {
+                    const day = this.dataset.day;
+                    const time = this.dataset.time;
+                    const field = this.dataset.field;
+                    const value = this.textContent.trim();
+                    let courseArr = schedule[day];
+                    if (!courseArr) {
+                        courseArr = [];
+                        schedule[day] = courseArr;
+                    }
+                    let courseObj = courseArr.find(c=>c.time===time);
+                    if (!courseObj) {
+                        courseObj = {time, course:'', teacher:''};
+                        courseArr.push(courseObj);
+                    }
+                    courseObj[field] = value;
+                };
+            });
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            renderFullScheduleTable();
+            document.getElementById('editScheduleBtn').onclick = function() {
+                isEditingSchedule = true;
+                renderFullScheduleTable();
+                this.classList.add('hidden');
+                document.getElementById('saveScheduleBtn').classList.remove('hidden');
+                document.getElementById('cancelEditScheduleBtn').classList.remove('hidden');
+            };
+            document.getElementById('saveScheduleBtn').onclick = function() {
+                localStorage.setItem('courseSchedule', JSON.stringify(schedule));
+                isEditingSchedule = false;
+                renderFullScheduleTable();
+                renderCourseSchedule(); // 添加这行来更新主界面显示
+                this.classList.add('hidden');
+                document.getElementById('cancelEditScheduleBtn').classList.add('hidden');
+                document.getElementById('editScheduleBtn').classList.remove('hidden');
+                alert('课程表已保存');
+            };
+            document.getElementById('cancelEditScheduleBtn').onclick = function() {
+                isEditingSchedule = false;
+                renderFullScheduleTable();
+                this.classList.add('hidden');
+                document.getElementById('saveScheduleBtn').classList.add('hidden');
+                document.getElementById('editScheduleBtn').classList.remove('hidden');
+            };
+        });
+        </script>
+
+        <!-- Current Course Info -->
+        <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+            <h2 class="text-xl font-semibold text-gray-700 mb-2">当前课程信息</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <span class="text-gray-600">时间:</span>
+                    <span id="currentTime" class="font-medium ml-2">未选择</span>
+                </div>
+                <div>
+                    <span class="text-gray-600">课程:</span>
+                    <span id="currentCourse" class="font-medium ml-2">未选择</span>
+                </div>
+                <div>
+                    <span class="text-gray-600">教师:</span>
+                    <span id="currentTeacher" class="font-medium ml-2">未选择</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Evaluation Section -->
+        <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">课堂目标及评价</h2>
+            
+            <!-- Legend -->
+            <div class="flex flex-wrap mb-4 text-sm">
+                <div class="mr-4 mb-2 flex items-center">
+                    <span class="w-4 h-4 inline-block bg-green-500 rounded-full mr-1"></span>
+                    <span>完成 <span class="text-gray-500">学生完全独立完成目标</span></span>
+                </div>
+                <div class="mr-4 mb-2 flex items-center">
+                    <span class="w-4 h-4 inline-block bg-yellow-500 rounded-full mr-1"></span>
+                    <span>协助下完成 <span class="text-gray-500">在老师协助下完成目标</span></span>
+                </div>
+                <div class="mr-4 mb-2 flex items-center">
+                    <span class="w-4 h-4 inline-block bg-red-500 rounded-full mr-1"></span>
+                    <span>部分完成 <span class="text-gray-500">仅部分完成目标要求</span></span>
+                </div>
+                <div class="mr-4 mb-2 flex items-center">
+                    <span class="w-4 h-4 inline-block bg-gray-400 rounded-full mr-1"></span>
+                    <span>未完成 <span class="text-gray-500">未能完成目标要求</span></span>
+                </div>
+            </div>
+
+            <!-- Goals Section -->
+            <div class="mb-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-medium text-gray-700 mb-2">课堂目标 <span class="text-sm text-gray-500">(点击可编辑)</span></h3>
+                    <button id="addGoalBtn" class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-sm">
+                        <i class="fas fa-plus mr-1"></i> 添加目标
+                    </button>
+                </div>
+                <div id="goalsList" class="border rounded-md p-2 mb-4">
+                    <!-- Goals will be loaded here -->
+                    <div class="text-gray-500 italic text-center py-2">请选择课程加载目标</div>
+                </div>
+            </div>
+
+            <!-- Manage Students Button & Actions -->
+            <div class="mb-4 flex flex-wrap items-center space-x-2">
+                <button id="manageStudentsBtn" class="text-blue-500 hover:text-blue-700">
+                    <i class="fas fa-user-edit"></i> 管理学生名单
+                </button>
+                <button id="toggleSelectAllBtn" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm">
+                    <i class="fas fa-users mr-1"></i> 全选学生
+                </button>
+                <button id="saveBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm">
+                    <i class="fas fa-save mr-1"></i> 保存评价
+                </button>
+            </div>
+
+            <!-- Evaluation Table -->
+            <div class="evaluation-table-container">
+                <table id="evaluationTable" class="evaluation-table">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="student-col border px-4 py-2 text-left">学生</th>
+                            <!-- 动态生成目标列 -->
+                            <th class="goal-col border px-4 py-2" v-for="goal in goals">目标1</th>
+                            <th class="photo-col border px-4 py-2 text-center">图片记录</th>
+                            <th class="comment-col border px-4 py-2 text-left">添加本课备注</th>
+                        </tr>
+                    </thead>
+                    <tbody id="evaluationBody">
+                        <tr v-for="student in students">
+                            <td class="student-col border px-4 py-2">{{ student.name }}</td>
+                            <!-- 动态生成评价单元格 -->
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+            <h2 class="text-xl font-semibold text-gray-700 mb-2">完成情况统计</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <h4 class="font-medium text-green-600">完成</h4>
+                    <div class="flex items-center">
+                        <div class="w-full bg-gray-200 rounded-full h-2.5 mr-2">
+                            <div id="completedBar" class="bg-green-500 h-2.5 rounded-full" style="width: 0%"></div>
+                        </div>
+                        <span id="completedCount">0</span>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="font-medium text-yellow-600">协助下完成</h4>
+                    <div class="flex items-center">
+                        <div class="w-full bg-gray-200 rounded-full h-2.5 mr-2">
+                            <div id="assistedBar" class="bg-yellow-500 h-2.5 rounded-full" style="width: 0%"></div>
+                        </div>
+                        <span id="assistedCount">0</span>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="font-medium text-red-600">部分完成</h4>
+                    <div class="flex items-center">
+                        <div class="w-full bg-gray-200 rounded-full h-2.5 mr-2">
+                            <div id="partialBar" class="bg-red-500 h-2.5 rounded-full" style="width: 0%"></div>
+                        </div>
+                        <span id="partialCount">0</span>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="font-medium text-gray-600">未完成</h4>
+                    <div class="flex items-center">
+                        <div class="w-full bg-gray-200 rounded-full h-2.5 mr-2">
+                            <div id="incompleteBar" class="bg-gray-400 h-2.5 rounded-full" style="width: 0%"></div>
+                        </div>
+                        <span id="incompleteCount">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center text-gray-500 text-xl mt-8 mb-4">
+            即墨智能课堂评价系统 © 2025 | 灵光闪过 即刻落墨 
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <!-- Photo Export Modal -->
+    <div id="photoExportModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full max-h-screen overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-800">导出照片</h3>
+                <button class="close-modal text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="mb-6">
+                <div class="flex space-x-4 mb-4">
+                    <button id="exportByStudentBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded flex-1">
+                        <i class="fas fa-user mr-2"></i> 按学生导出
+                    </button>
+                    <button id="exportBySubjectBtn" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded flex-1">
+                        <i class="fas fa-book mr-2"></i> 按学科导出
+                    </button>
+                </div>
+                
+                <!-- 导出选项区域 -->
+                <div id="exportOptionsContainer" class="border rounded-md p-4 bg-gray-50">
+                    <!-- 选项将根据选择的导出方式动态加载 -->
+                    <div class="text-gray-500 italic text-center py-4">请选择导出方式</div>
+                </div>
+            </div>
+            <div class="text-right">
+                <button id="startExportBtn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fas fa-download mr-1"></i> 开始导出
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Help Modal -->
+    <div id="helpModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full max-h-screen overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-800">系统使用帮助</h3>
+                <button class="close-modal text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <h4 class="font-semibold text-lg">基本操作</h4>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li>选择星期和课程：点击顶部的星期按钮，然后在课程表中选择课程</li>
+                        <li>学生出勤标记：点击学生姓名将其标记为高亮（表示出勤），再次点击取消选中</li>
+                        <li>评价操作：对每位出勤学生的每个目标选择评价等级（绿、黄、红、灰）</li>
+                        <li>批量评价：使用目标右侧的批量操作按钮，为所有选中学生设置相同评价</li>
+                        <li>取消评价：再次点击已选择的评价按钮可取消评价</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-lg">数据管理</h4>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li>保存评价：完成评价后点击"保存评价"按钮</li>
+                        <li>导出数据：点击"导出数据"按钮导出所有已保存的评价记录</li>
+                        <li>清除本课：清除当前课程的评价数据</li>
+                        <li>生成报告：生成包含图表和统计信息的评价报告</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-lg">系统定制</h4>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li>编辑课程表：点击"编辑课程表"按钮修改课程信息</li>
+                        <li>管理学生名单：点击"管理学生名单"按钮添加或删除学生</li>
+                        <li>编辑目标：直接点击目标文本进行编辑，点击"添加目标"按钮新增目标</li>
+                        <li>自定义评语：在评语下拉菜单中管理快速评语模板</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-lg">提示与建议</h4>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li>定期导出数据作为备份</li>
+                        <li>先使用批量评价设置基础评价，再针对特殊情况进行个别调整</li>
+                        <li>已评价的课程在课程表中会有特殊标记</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="mt-6 text-right">
+                <button class="close-modal bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                    我明白了
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Management Modal -->
+    <div id="studentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl p-6 max-w-lg w-full">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-800">管理学生名单</h3>
+                <button class="close-modal text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="mb-4">
+                <p class="text-sm text-gray-600 mb-2">每行输入一个学生姓名，保存后生效</p>
+                <textarea id="studentListEditor" class="w-full border rounded p-2 h-48"></textarea>
+            </div>
+            <div class="text-right">
+                <button id="saveStudentsBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                    保存学生名单
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Schedule Editor Modal -->
+    <div id="scheduleModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl p-6 max-w-6xl w-full max-h-screen overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-800">编辑课程表</h3>
+                <button class="close-modal text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="mb-4">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full border">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                <th class="border px-4 py-2">时间</th>
+                                <th class="border px-4 py-2">周一</th>
+                                <th class="border px-4 py-2">周二</th>
+                                <th class="border px-4 py-2">周三</th>
+                                <th class="border px-4 py-2">周四</th>
+                                <th class="border px-4 py-2">周五</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scheduleTableBody">
+                            <!-- 课程表将通过 JavaScript 动态生成 -->
+                        </tbody>
+                    </table>
+                    <button id="addTimeSlotBtn" class="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                        <i class="fas fa-plus mr-2"></i> 添加时间段
+                    </button>
+                </div>
+            </div>
+            <!-- 移除保存课程表按钮 -->
+        </div>
+    </div>
+
+    <!-- Photo View Modal -->
+    <div id="photoModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 hidden">
+        <div class="relative">
+            <button class="absolute top-4 right-4 text-white hover:text-gray-300 text-2xl close-modal">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="flex items-center">
+                <button id="prevPhotoBtn" class="text-white text-4xl mx-4 hover:text-blue-300 focus:outline-none">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div class="relative">
+                    <img id="photoView" class="max-w-full max-h-[90vh]" src="" alt="学生照片">
+                    <div id="photoCounter" class="absolute bottom-4 left-0 right-0 text-center text-white bg-black bg-opacity-50 py-1">
+                        <span id="currentPhotoIndex">1</span>/<span id="totalPhotos">1</span>
+                    </div>
+                </div>
+                <button id="nextPhotoBtn" class="text-white text-4xl mx-4 hover:text-blue-300 focus:outline-none">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Photo Upload Modal -->
+    <div id="uploadModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-800">上传图片记录</h3>
+                <button class="close-modal text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="mb-4">
+                <div id="photoGalleryPreview" class="mb-4 grid grid-cols-1 md:grid-cols-3 gap-3 max-h-80 overflow-y-auto p-2">
+                    <div id="photoDropZone" class="w-full h-40 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors">
+                        <i class="fas fa-plus text-gray-400 text-2xl mb-2"></i>
+                        <span class="text-gray-400">添加照片</span>
+                    </div>
+                </div>
+                <input type="file" id="photoInput" accept="image/*" class="hidden" multiple>
+            </div>
+            <div class="flex justify-between">
+                <button id="clearPhotosBtn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">
+                    <i class="fas fa-trash-alt mr-1"></i> 清除所有照片
+                </button>
+                <button id="uploadPhotoBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                    <i class="fas fa-save mr-1"></i> 保存图片
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Notification -->
+    <div id="notification" class="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow-lg transform transition-transform duration-300 translate-y-16 opacity-0">
+        <span id="notificationText">操作成功！</span>
+    </div>
+
+    <!-- 修改设置模态框的 HTML 结构 -->
+    <div id="settingsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl p-6 max-w-6xl w-full max-h-screen overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-800">系统设置</h3>
+                <button class="close-modal text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <!-- 设置选择区域 -->
+            <div class="mb-6">
+                <div class="flex items-center space-x-4 mb-4">
+                    <select id="settingsSelect" class="flex-1 border rounded px-3 py-2">
+                        <option value="">选择现有设置</option>
+                    </select>
+                    <button id="createNewSettingBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                        <i class="fas fa-plus mr-2"></i> 新建设置
+                    </button>
+                    <button id="saveSettingBtn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">
+                        <i class="fas fa-save mr-2"></i> 保存设置
+                    </button>
+                    <button id="deleteSettingBtn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">
+                        <i class="fas fa-trash mr-2"></i> 删除设置
+                    </button>
+                </div>
+            </div>
+
+            <!-- 设置编辑区域 -->
+            <div class="grid grid-cols-1 gap-6">
+                <!-- 课程表设置 -->
+                <div class="border rounded-lg p-4">
+                    <h4 class="text-lg font-semibold mb-4">课程表设置</h4>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full border">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    <th class="border px-4 py-2">时间</th>
+                                    <th class="border px-4 py-2">周一</th>
+                                    <th class="border px-4 py-2">周二</th>
+                                    <th class="border px-4 py-2">周三</th>
+                                    <th class="border px-4 py-2">周四</th>
+                                    <th class="border px-4 py-2">周五</th>
+                                </tr>
+                            </thead>
+                            <tbody id="scheduleTableBody">
+                                <!-- 课程表将通过 JavaScript 动态生成 -->
+                            </tbody>
+                        </table>
+                        <button id="addTimeSlotBtn" class="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                            <i class="fas fa-plus mr-2"></i> 添加时间段
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 学科目标设置 -->
+                <div class="border rounded-lg p-4">
+                    <h4 class="text-lg font-semibold mb-4">学科目标设置</h4>
+                    <div id="criteriaEditor" class="space-y-4">
+                        <!-- 学科目标将通过 JavaScript 动态生成 -->
+                    </div>
+                    <button id="addSubjectBtn" class="mt-4 text-blue-500 hover:text-blue-700">
+                        <i class="fas fa-plus mr-1"></i> 添加学科
+                    </button>
+                </div>
+
+                <!-- 学生名单设置 -->
+                <div class="border rounded-lg p-4">
+                    <h4 class="text-lg font-semibold mb-4">学生名单设置</h4>
+                    <textarea id="studentListEditor" class="w-full h-40 border rounded p-2" placeholder="每行输入一个学生姓名"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加课程输入框模板 -->
+    <template id="courseInputTemplate">
+        <div class="course-input flex items-center space-x-2">
+            <input type="time" class="time-input border rounded px-2 py-1 w-24">
+            <input type="text" class="course-input border rounded px-2 py-1 flex-1" placeholder="课程名称">
+            <input type="text" class="teacher-input border rounded px-2 py-1 w-24" placeholder="教师">
+            <button class="remove-course text-red-500 hover:text-red-700">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </template>
+
+    <!-- 添加学科目标模板 -->
+    <template id="subjectCriteriaTemplate">
+        <div class="subject-criteria border rounded p-4">
+            <div class="flex items-center justify-between mb-2">
+                <input type="text" class="subject-name border rounded px-2 py-1 flex-1 mr-2" placeholder="学科名称">
+                <button class="remove-subject text-red-500 hover:text-red-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="criteria-list space-y-2">
+                <!-- 目标输入框将通过 JavaScript 动态生成 -->
+            </div>
+            <button class="add-criterion text-blue-500 hover:text-blue-700 mt-2">
+                <i class="fas fa-plus mr-1"></i> 添加目标
+            </button>
+        </div>
+    </template>
+
+    <!-- 添加课程编辑模态框 -->
+    <div id="courseEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-800">编辑课程</h3>
+                <button class="close-modal text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">课程名称</label>
+                    <input type="text" id="courseNameInput" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">教师姓名</label>
+                    <input type="text" id="teacherNameInput" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-2">
+                <button id="cancelCourseEditBtn" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">
+                    取消
+                </button>
+                <button id="saveCourseEditBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                    保存
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
+    <script>
+        // 课程选择处理函数
+        function handleCourseSelection(course) {
+            // 显示评价界面
+            document.querySelector('.evaluation-section').style.display = 'block';
+            
+            // 更新当前课程信息
+            document.getElementById('currentCourse').textContent = course.name;
+            
+            // 生成目标列
+            generateGoalColumns(course.goals);
+            
+            // 生成学生评价行
+            generateStudentRows();
+            
+            // 计算并更新固定列的left位置
+            updateFixedColumnPosition();
+        }
+
+        // 更新固定列位置
+        function updateFixedColumnPosition() {
+            const tableRect = document.querySelector('.evaluation-table').getBoundingClientRect();
+            const firstColumn = document.querySelectorAll('.student-col');
+            firstColumn.forEach(col => {
+                col.style.left = `${tableRect.left}px`;
+            });
+        }
+
+        // 窗口大小变化时重新计算位置
+        window.addEventListener('resize', updateFixedColumnPosition);
+
+        // 初始化课程点击事件
+        document.querySelectorAll('.course-cell').forEach(button => {
+            button.addEventListener('click', () => {
+                const course = {
+                    name: button.dataset.course,
+                    goals: JSON.parse(button.dataset.goals || '[]')
+                };
+                handleCourseSelection(course);
+            });
+        });
+        document.addEventListener('DOMContentLoaded', function() {
+            // 从本地存储加载课程表，如果没有则使用默认数据
+            let schedule = JSON.parse(localStorage.getItem('courseSchedule')) || {
+                "周一": [
+                    { time: "8:15-8:50", course: "班队活动", teacher: "邱意" },
+                    { time: "9:20-9:55", course: "生活数学", teacher: "张进财" },
+                    { time: "10:10-10:45", course: "生活与劳技", teacher: "吴婉颜" },
+                    { time: "11:00-11:35", course: "运动与保健", teacher: "邱意" },
+                    { time: "14:30-15:05", course: "运动与保健", teacher: "邱意" },
+                    { time: "15:20-15:55", course: "综合实践", teacher: "吴婉颜" }
+                ],
+                "周二": [
+                    { time: "8:15-8:50", course: "生活语文", teacher: "谭飞舟" },
+                    { time: "9:20-9:55", course: "运动与保健", teacher: "邱意" },
+                    { time: "10:10-10:45", course: "绘画与手工", teacher: "邹春安" },
+                    { time: "11:00-11:35", course: "绘画与手工", teacher: "邹春安" },
+                    { time: "14:30-15:05", course: "社团活动", teacher: "邱杨吴邹" },
+                    { time: "15:20-15:55", course: "社团活动", teacher: "邱杨邹" }
+                ],
+                "周三": [
+                    { time: "8:15-8:50", course: "生活语文", teacher: "谭飞舟" },
+                    { time: "9:20-9:55", course: "生活与劳技", teacher: "吴婉颜" },
+                    { time: "10:10-10:45", course: "生活与劳技", teacher: "吴婉颜" },
+                    { time: "11:00-11:35", course: "心理健康", teacher: "杨慧" },
+                    { time: "14:30-15:05", course: "唱游与律动", teacher: "杨慧" },
+                    { time: "15:20-15:55", course: "唱游与律动", teacher: "杨慧" }
+                ],
+                "周四": [
+                    { time: "8:15-8:50", course: "思政", teacher: "邱意" },
+                    { time: "9:20-9:55", course: "生活数学", teacher: "张进财" },
+                    { time: "10:10-10:45", course: "运动与保健", teacher: "邱意" },
+                    { time: "11:00-11:35", course: "运动与保健", teacher: "邱意" },
+                    { time: "14:30-15:05", course: "唱游与律动", teacher: "杨慧" },
+                    { time: "15:20-15:55", course: "生活与劳技", teacher: "吴婉颜" }
+                ],
+                "周五": [
+                    { time: "8:15-8:50", course: "生活数学", teacher: "张进财" },
+                    { time: "9:20-9:55", course: "生活语文", teacher: "谭飞舟" },
+                    { time: "10:10-10:45", course: "生活与劳技", teacher: "吴婉颜" },
+                    { time: "11:00-11:35", course: "运动与保健", teacher: "邱意" },
+                    { time: "14:30-15:05", course: "综合实践", teacher: "吴婉颜" },
+                    { time: "15:20-15:55", course: "综合实践", teacher: "吴婉颜" }
+                ]
+            };
+
+            let students = ["王淑贤", "李曜轩", "梁昊然", "吴泓伸", "卢晓婷", "陈俊逸", "麦芷婷", "林礼扬", "冯志彬", "郭思辰", "贺盛奇"];
+
+            const courseCriteria = {
+                "生活数学": ["课堂常规", "互动参与", "点数能力", "比较数的大小"],
+                "生活语文": ["目光交流", "使用沟通板", "音量控制", "回答问题", "表达需求", "完成任务"],
+                "生活与劳技": ["掌握基本生活技能", "了解基本健康知识", "参与简单家务劳动", "遵守学校基本规则", "合理表达自我情绪"],
+                "运动与保健": ["完成队形队列", "尝试新动作", "等待轮流", "完成上台阶练习", "运动量达标"],
+                "绘画与手工": ["取放工具", "持续操作3分钟", "整理材料", "正确拿取海绵印章", "颜色配对", "能在白板上描50cm的线条"],
+                "唱游与律动": ["参与集体活动", "跟随节拍", "模仿2个律动动作", "学唱歌曲", "传递乐器"]
+            };
+
+            let defaultCriteria = ["课堂纪律", "课堂参与", "师生互动"];
+
+            let quickComments = [
+                "表现优秀，持续专注",
+                "进步明显，继续加油",
+                "需要关注，注意力不集中",
+                "积极参与课堂活动",
+                "情绪稳定，配合良好",
+                "课堂纪律有待提高"
+            ];
+
+            // Current state
+            let currentDay = "周一";
+            let currentCourse = null;
+            let currentGoals = [];
+            let selectedStudents = new Set();
+            let evaluationData = {};
+            let photoData = {};
+
+            // DOM Elements
+            const courseScheduleEl = document.getElementById('courseSchedule');
+            const currentTimeEl = document.getElementById('currentTime');
+            const currentCourseEl = document.getElementById('currentCourse');
+            const currentTeacherEl = document.getElementById('currentTeacher');
+            const goalsListEl = document.getElementById('goalsList');
+            const evaluationBodyEl = document.getElementById('evaluationBody');
+            const evaluationTableEl = document.getElementById('evaluationTable');
+            const dayButtons = document.querySelectorAll('.day-button');
+            const helpModal = document.getElementById('helpModal');
+            const studentModal = document.getElementById('studentModal');
+            const scheduleModal = document.getElementById('scheduleModal');
+            const photoModal = document.getElementById('photoModal');
+            const uploadModal = document.getElementById('uploadModal');
+            const notification = document.getElementById('notification');
+
+            // Statistics elements
+            const completedCountEl = document.getElementById('completedCount');
+            const assistedCountEl = document.getElementById('assistedCount');
+            const partialCountEl = document.getElementById('partialCount');
+            const incompleteCountEl = document.getElementById('incompleteCount');
+            const completedBarEl = document.getElementById('completedBar');
+            const assistedBarEl = document.getElementById('assistedBar');
+            const partialBarEl = document.getElementById('partialBar');
+            const incompleteBarEl = document.getElementById('incompleteBar');
+
+            // Load saved data
+            loadData();
+            
+            // 转换旧版本的photoData格式（单张图片）到新版本（多张图片数组）
+            for (const student in photoData) {
+                for (const courseKey in photoData[student]) {
+                    if (photoData[student][courseKey] && !Array.isArray(photoData[student][courseKey])) {
+                        // 将单张图片转换为数组格式
+                        photoData[student][courseKey] = [photoData[student][courseKey]];
+                    }
+                }
+            }
+
+            // Initialize UI
+            initializeUI();
+
+            // Event Listeners
+            function initializeUI() {
+                // Buttons
+                const toggleSelectAllBtn = document.getElementById('toggleSelectAllBtn');
+                toggleSelectAllBtn.addEventListener('click', () => {
+                    const allStudentsCount = students.length;
+                    const selectedCount = selectedStudents.size;
+                    
+                    if (selectedCount < allStudentsCount) {
+                        selectAllStudents();
+                        toggleSelectAllBtn.innerHTML = '<i class="fas fa-user-slash mr-1"></i> 取消全选';
+                        toggleSelectAllBtn.classList.replace('bg-green-500', 'bg-yellow-500');
+                        toggleSelectAllBtn.classList.replace('hover:bg-green-600', 'hover:bg-yellow-600');
+                    } else {
+                        deselectAllStudents();
+                        toggleSelectAllBtn.innerHTML = '<i class="fas fa-users mr-1"></i> 全选学生';
+                        toggleSelectAllBtn.classList.replace('bg-yellow-500', 'bg-green-500');
+                        toggleSelectAllBtn.classList.replace('hover:bg-yellow-600', 'hover:bg-green-600');
+                    }
+                });
+                document.getElementById('saveBtn').addEventListener('click', saveEvaluation);
+                document.getElementById('clearBtn').addEventListener('click', clearCurrentEvaluation);
+                document.getElementById('exportBtn').addEventListener('click', exportData);
+                document.getElementById('exportPhotosBtn').addEventListener('click', showPhotoExportModal);
+                document.getElementById('reportBtn').addEventListener('click', generateReport);
+                document.getElementById('helpBtn').addEventListener('click', () => showModal(helpModal));
+                document.getElementById('manageStudentsBtn').addEventListener('click', () => showStudentManager());
+                document.getElementById('editScheduleBtn').addEventListener('click', () => showScheduleEditor());
+                document.getElementById('addGoalBtn').addEventListener('click', addNewGoal);
+
+                // Modal close buttons
+                document.querySelectorAll('.close-modal').forEach(button => {
+                    button.addEventListener('click', function() {
+                        this.closest('.fixed').classList.add('hidden');
+                    });
+                });
+
+                // Save buttons in modals
+                document.getElementById('saveStudentsBtn').addEventListener('click', saveStudentList);
+                document.getElementById('saveScheduleBtn').addEventListener('click', saveSchedule);
+                document.getElementById('uploadPhotoBtn').addEventListener('click', savePhoto);
+                
+                // 照片导出模态框按钮
+                document.getElementById('exportByStudentBtn').addEventListener('click', showExportByStudentOptions);
+                document.getElementById('exportBySubjectBtn').addEventListener('click', showExportBySubjectOptions);
+                document.getElementById('startExportBtn').addEventListener('click', startExportPhotos);
+
+                // Photo modal close and navigation
+                document.querySelector('#photoModal .close-modal').addEventListener('click', function() {
+                    photoModal.classList.add('hidden');
+                });
+                
+                // 添加点击模态框背景关闭功能，适用于平板设备
+                photoModal.addEventListener('click', function(e) {
+                    // 如果点击的是模态框背景（而不是其内容），则关闭模态框
+                    if (e.target === photoModal) {
+                        photoModal.classList.add('hidden');
+                    }
+                });
+                
+                // Setup keyboard navigation for photo carousel
+                document.addEventListener('keydown', function(e) {
+                    if (photoModal.classList.contains('hidden')) return;
+                    
+                    if (e.key === 'ArrowLeft') {
+                        document.getElementById('prevPhotoBtn').click();
+                    } else if (e.key === 'ArrowRight') {
+                        document.getElementById('nextPhotoBtn').click();
+                    } else if (e.key === 'Escape') {
+                        photoModal.classList.add('hidden');
+                    }
+                });
+                
+                // Clear photos button
+                document.getElementById('clearPhotosBtn').addEventListener('click', clearPhotos);
+
+                // Render initial course schedule
+                renderCourseSchedule();
+
+                // Show help modal on first visit
+                if (!localStorage.getItem('helpShown')) {
+                    showModal(helpModal);
+                    localStorage.setItem('helpShown', 'true');
+                }
+
+                // 在全局变量区域添加
+                let savedSettings = {};
+                let currentSettingId = null;
+
+                // 在 initializeUI 函数中添加设置按钮事件监听
+                document.getElementById('settingsBtn').addEventListener('click', showSettings);
+
+                // 设置相关函数
+                function showSettings() {
+                    // 加载已保存的设置
+                    loadSavedSettings();
+                    
+                    // 初始化编辑器
+                    initializeScheduleEditor();
+                    initializeCriteriaEditor();
+                    initializeStudentListEditor();
+                    
+                    // 显示设置模态框
+                    showModal(document.getElementById('settingsModal'));
+                }
+
+                function loadSavedSettings() {
+                    // 从 localStorage 加载设置
+                    const savedSettingsStr = localStorage.getItem('savedSettings');
+                    if (savedSettingsStr) {
+                        savedSettings = JSON.parse(savedSettingsStr);
+                    }
+                    
+                    // 更新设置选择下拉框
+                    const settingsSelect = document.getElementById('settingsSelect');
+                    settingsSelect.innerHTML = '<option value="">选择现有设置</option>';
+                    
+                    for (const [id, setting] of Object.entries(savedSettings)) {
+                        const option = document.createElement('option');
+                        option.value = id;
+                        option.textContent = setting.name;
+                        if (id === currentSettingId) {
+                            option.selected = true;
+                        }
+                        settingsSelect.appendChild(option);
+                    }
+                }
+
+                // 修改课程表初始化函数
+                function initializeScheduleEditor() {
+                    const tableBody = document.getElementById('scheduleTableBody');
+                    tableBody.innerHTML = '';
+                    
+                    // 获取当前课程表的所有时间段
+                    const timeSlots = new Set();
+                    Object.values(schedule).forEach(daySchedule => {
+                        daySchedule.forEach(course => {
+                            timeSlots.add(course.time);
+                        });
+                    });
+                    
+                    // 如果当前没有时间段，使用默认的6个时间段
+                    if (timeSlots.size === 0) {
+                        timeSlots.add('8:15-8:50');
+                        timeSlots.add('9:20-9:55');
+                        timeSlots.add('10:10-10:45');
+                        timeSlots.add('11:00-11:35');
+                        timeSlots.add('14:30-15:05');
+                        timeSlots.add('15:20-15:55');
+                    }
+                    
+                    // 将时间段转换为数组并排序
+                    const sortedTimeSlots = Array.from(timeSlots).sort();
+                    
+                    // 为每个时间段创建一行
+                    sortedTimeSlots.forEach(timeSlot => {
+                        const row = document.createElement('tr');
+                        
+                        // 添加时间列（可编辑）
+                        const timeCell = document.createElement('td');
+                        timeCell.className = 'border px-4 py-2';
+                        const timeInput = document.createElement('input');
+                        timeInput.type = 'text';
+                        timeInput.className = 'w-full px-2 py-1 border rounded';
+                        timeInput.value = timeSlot;
+                        timeInput.dataset.originalTime = timeSlot;
+                        timeCell.appendChild(timeInput);
+                        row.appendChild(timeCell);
+                        
+                        // 添加每天的课程单元格
+                        ['周一', '周二', '周三', '周四', '周五'].forEach(day => {
+                            const cell = document.createElement('td');
+                            cell.className = 'border px-4 py-2 text-center cursor-pointer hover:bg-gray-50';
+                            cell.dataset.day = day;
+                            cell.dataset.time = timeSlot;
+                            
+                            // 查找并显示现有课程
+                            const existingCourse = findExistingCourse(day, timeSlot);
+                            if (existingCourse) {
+                                cell.innerHTML = `
+                                    <div class="course-info">
+                                        <div class="font-medium">${existingCourse.course}</div>
+                                        <div class="text-sm text-gray-500">${existingCourse.teacher}</div>
+                                    </div>
+                                `;
+                            } else {
+                                cell.innerHTML = '<div class="text-gray-400">点击添加课程</div>';
+                            }
+                            
+                            // 添加点击事件
+                            cell.addEventListener('click', () => showCourseEditModal(cell));
+                            
+                            row.appendChild(cell);
+                        });
+                        
+                        tableBody.appendChild(row);
+                    });
+                    
+                    // 添加新增时间段按钮事件
+                    document.getElementById('addTimeSlotBtn').addEventListener('click', function() {
+                        const row = document.createElement('tr');
+                        
+                        // 添加时间列（可编辑）
+                        const timeCell = document.createElement('td');
+                        timeCell.className = 'border px-4 py-2';
+                        const timeInput = document.createElement('input');
+                        timeInput.type = 'text';
+                        timeInput.className = 'w-full px-2 py-1 border rounded';
+                        timeInput.placeholder = '输入时间段';
+                        timeCell.appendChild(timeInput);
+                        row.appendChild(timeCell);
+                        
+                        // 添加每天的课程单元格
+                        ['周一', '周二', '周三', '周四', '周五'].forEach(day => {
+                            const cell = document.createElement('td');
+                            cell.className = 'border px-4 py-2 text-center cursor-pointer hover:bg-gray-50';
+                            cell.innerHTML = '<div class="text-gray-400">点击添加课程</div>';
+                            cell.addEventListener('click', () => showCourseEditModal(cell));
+                            row.appendChild(cell);
+                        });
+                        
+                        tableBody.appendChild(row);
+                    });
+                }
+
+                // 查找现有课程
+                function findExistingCourse(day, timeSlot) {
+                    if (!schedule[day]) return null;
+                    return schedule[day].find(course => course.time === timeSlot);
+                }
+
+                // 显示课程编辑模态框
+                function showCourseEditModal(cell) {
+                    const modal = document.getElementById('courseEditModal');
+                    const courseNameInput = document.getElementById('courseNameInput');
+                    const teacherNameInput = document.getElementById('teacherNameInput');
+                    
+                    // 获取现有课程信息
+                    const existingCourse = findExistingCourse(cell.dataset.day, cell.dataset.time);
+                    if (existingCourse) {
+                        courseNameInput.value = existingCourse.course;
+                        teacherNameInput.value = existingCourse.teacher;
+                    } else {
+                        courseNameInput.value = '';
+                        teacherNameInput.value = '';
+                    }
+                    
+                    // 显示模态框
+                    showModal(modal);
+                    
+                    // 保存按钮事件
+                    document.getElementById('saveCourseEditBtn').onclick = () => {
+                        const courseName = courseNameInput.value.trim();
+                        const teacherName = teacherNameInput.value.trim();
+                        
+                        if (!courseName) {
+                            showNotification('请输入课程名称', 'error');
+                            return;
+                        }
+                        
+                        // 更新课程信息
+                        if (!schedule[cell.dataset.day]) {
+                            schedule[cell.dataset.day] = [];
+                        }
+                        
+                        const courseIndex = schedule[cell.dataset.day].findIndex(
+                            course => course.time === cell.dataset.time
+                        );
+                        
+                        const courseInfo = {
+                            time: cell.dataset.time,
+                            course: courseName,
+                            teacher: teacherName
+                        };
+                        
+                        if (courseIndex === -1) {
+                            schedule[cell.dataset.day].push(courseInfo);
+                        } else {
+                            schedule[cell.dataset.day][courseIndex] = courseInfo;
+                        }
+                        
+                        // 更新单元格显示
+                        cell.innerHTML = `
+                            <div class="course-info">
+                                <div class="font-medium">${courseName}</div>
+                                <div class="text-sm text-gray-500">${teacherName}</div>
+                            </div>
+                        `;
+                        
+                        // 保存到本地存储
+                        localStorage.setItem('courseSchedule', JSON.stringify(schedule));
+                        
+                        // 更新主界面显示
+                        renderCourseSchedule();
+                        
+                        // 关闭模态框
+                        modal.classList.add('hidden');
+                        
+                        // 显示成功通知
+                        showNotification('课程表已更新');
+                    };
+                    
+                    // 取消按钮事件
+                    document.getElementById('cancelCourseEditBtn').onclick = () => {
+                        modal.classList.add('hidden');
+                    };
+                }
+
+                function initializeCriteriaEditor() {
+                    const container = document.getElementById('criteriaEditor');
+                    const template = document.getElementById('subjectCriteriaTemplate');
+                    
+                    // 添加学科按钮事件
+                    document.getElementById('addSubjectBtn').onclick = () => {
+                        const subjectCriteria = template.content.cloneNode(true);
+                        container.appendChild(subjectCriteria);
+                        
+                        // 添加删除按钮事件
+                        const removeBtn = container.lastElementChild.querySelector('.remove-subject');
+                        removeBtn.onclick = () => removeBtn.closest('.subject-criteria').remove();
+                        
+                        // 添加目标按钮事件
+                        const addCriterionBtn = container.lastElementChild.querySelector('.add-criterion');
+                        addCriterionBtn.onclick = () => {
+                            const criterionInput = document.createElement('input');
+                            criterionInput.type = 'text';
+                            criterionInput.className = 'criterion-input border rounded px-2 py-1 w-full';
+                            criterionInput.placeholder = '输入目标';
+                            
+                            const removeBtn = document.createElement('button');
+                            removeBtn.className = 'remove-criterion text-red-500 hover:text-red-700 ml-2';
+                            removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+                            removeBtn.onclick = () => criterionInput.parentElement.remove();
+                            
+                            const wrapper = document.createElement('div');
+                            wrapper.className = 'flex items-center';
+                            wrapper.appendChild(criterionInput);
+                            wrapper.appendChild(removeBtn);
+                            
+                            addCriterionBtn.parentElement.querySelector('.criteria-list').appendChild(wrapper);
+                        };
+                    };
+                }
+
+                function initializeStudentListEditor() {
+                    const editor = document.getElementById('studentListEditor');
+                    editor.value = students.join('\n');
+                }
+
+                // 保存设置
+                function saveSetting() {
+                    const settingName = prompt('请输入设置名称：');
+                    if (!settingName) return;
+                    
+                    // 收集课程表数据
+                    const newSchedule = {};
+                    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+                    days.forEach(day => {
+                        const daySchedule = [];
+                        const container = document.getElementById(`${day}Schedule`);
+                        container.querySelectorAll('.course-input').forEach(input => {
+                            const time = input.querySelector('.time-input').value;
+                            const course = input.querySelector('.course-input').value;
+                            const teacher = input.querySelector('.teacher-input').value;
+                            if (time && course) {
+                                daySchedule.push({ time, course, teacher });
+                            }
+                        });
+                        if (daySchedule.length > 0) {
+                            newSchedule[day] = daySchedule;
+                        }
+                    });
+                    
+                    // 收集学科目标数据
+                    const newCriteria = {};
+                    document.querySelectorAll('.subject-criteria').forEach(subject => {
+                        const subjectName = subject.querySelector('.subject-name').value;
+                        if (subjectName) {
+                            const criteria = [];
+                            subject.querySelectorAll('.criterion-input').forEach(input => {
+                                if (input.value) {
+                                    criteria.push(input.value);
+                                }
+                            });
+                            if (criteria.length > 0) {
+                                newCriteria[subjectName] = criteria;
+                            }
+                        }
+                    });
+                    
+                    // 收集学生名单
+                    const newStudents = document.getElementById('studentListEditor').value
+                        .split('\n')
+                        .map(s => s.trim())
+                        .filter(s => s);
+                    
+                    if (newStudents.length === 0) {
+                        showNotification('学生名单不能为空', 'error');
+                        return;
+                    }
+                    
+                    // 创建新设置
+                    const settingId = 'setting_' + Date.now();
+                    savedSettings[settingId] = {
+                        name: settingName,
+                        schedule: newSchedule,
+                        criteria: newCriteria,
+                        students: newStudents
+                    };
+                    
+                    // 保存到 localStorage
+                    localStorage.setItem('savedSettings', JSON.stringify(savedSettings));
+                    
+                    // 更新设置列表
+                    loadSavedSettings();
+                    
+                    showNotification('设置已保存');
+                }
+
+                // 切换设置
+                function switchSetting(settingId) {
+                    const setting = savedSettings[settingId];
+                    if (!setting) return;
+                    
+                    // 更新当前设置ID
+                    currentSettingId = settingId;
+                    
+                    // 应用设置
+                    schedule = setting.schedule;
+                    courseCriteria = setting.criteria;
+                    students = setting.students;
+                    
+                    // 保存到 localStorage
+                    localStorage.setItem('courseSchedule', JSON.stringify(schedule));
+                    localStorage.setItem('courseCriteria', JSON.stringify(courseCriteria));
+                    localStorage.setItem('students', JSON.stringify(students));
+                    
+                    // 更新UI
+                    renderCourseSchedule();
+                    renderEvaluationTable();
+                    
+                    showNotification('已切换到设置: ' + setting.name);
+                }
+
+                // 删除设置
+                function deleteSetting() {
+                    const settingsSelect = document.getElementById('settingsSelect');
+                    const settingId = settingsSelect.value;
+                    
+                    if (!settingId) {
+                        showNotification('请先选择要删除的设置', 'error');
+                        return;
+                    }
+                    
+                    if (!confirm('确定要删除这个设置吗？')) return;
+                    
+                    delete savedSettings[settingId];
+                    localStorage.setItem('savedSettings', JSON.stringify(savedSettings));
+                    
+                    if (currentSettingId === settingId) {
+                        currentSettingId = null;
+                    }
+                    
+                    loadSavedSettings();
+                    showNotification('设置已删除');
+                }
+
+                // 添加事件监听
+                document.getElementById('settingsSelect').addEventListener('change', function() {
+                    if (this.value) {
+                        switchSetting(this.value);
+                    }
+                });
+
+                document.getElementById('createNewSettingBtn').addEventListener('click', function() {
+                    // 清空编辑器
+                    document.querySelectorAll('.course-input').forEach(input => input.remove());
+                    document.getElementById('criteriaEditor').innerHTML = '';
+                    document.getElementById('studentListEditor').value = '';
+                    
+                    // 重置设置选择
+                    document.getElementById('settingsSelect').value = '';
+                    currentSettingId = null;
+                });
+
+                document.getElementById('saveSettingBtn').addEventListener('click', saveSetting);
+                document.getElementById('deleteSettingBtn').addEventListener('click', deleteSetting);
+            }
+
+            // Course Schedule
+            function renderCourseSchedule() {
+                let html = '<table class="min-w-full border-collapse">';
+                html += '<tr class="bg-gray-100"><th class="border px-3 py-2">时间</th>';
+                
+                // 添加星期表头
+                const days = ["周一", "周二", "周三", "周四", "周五"];
+                days.forEach(day => {
+                    html += `<th class="border px-3 py-2">${day}</th>`;
+                });
+                html += '</tr>';
+                
+                // 获取所有时间段
+                const allTimes = new Set();
+                days.forEach(day => {
+                    if (schedule[day]) {
+                        schedule[day].forEach(course => {
+                            allTimes.add(course.time);
+                        });
+                    }
+                });
+                
+                // 将时间段转换为数组并按实际时间排序
+                const sortedTimes = Array.from(allTimes).sort((a, b) => {
+                    // 提取开始时间（例如从 "8:15-8:50" 提取 "8:15"）
+                    const timeA = a.split('-')[0];
+                    const timeB = b.split('-')[0];
+                    
+                    // 将时间转换为分钟数进行比较
+                    const [hoursA, minutesA] = timeA.split(':').map(Number);
+                    const [hoursB, minutesB] = timeB.split(':').map(Number);
+                    
+                    const totalMinutesA = hoursA * 60 + minutesA;
+                    const totalMinutesB = hoursB * 60 + minutesB;
+                    
+                    return totalMinutesA - totalMinutesB;
+                });
+                
+                // 为每个时间段创建一行
+                sortedTimes.forEach(time => {
+                    html += '<tr>';
+                    html += `<td class="border px-3 py-2">${time}</td>`;
+                    
+                    // 为每天添加课程单元格
+                    days.forEach(day => {
+                        const course = schedule[day]?.find(c => c.time === time);
+                        const courseKey = course ? `${day}_${time}_${course.course}` : null;
+                        const isEvaluated = courseKey && evaluationData[courseKey] !== undefined;
+                        const courseClass = isEvaluated ? 'bg-green-50 hover:bg-green-100' : 'hover:bg-gray-50';
+                        
+                        html += `<td class="border px-3 py-2 course-cell ${courseClass}" 
+                            data-day="${day}" 
+                            data-time="${time}" 
+                            data-course="${course ? course.course : ''}" 
+                            data-teacher="${course ? course.teacher : ''}"
+                            style="cursor: pointer;">`;
+                        
+                        if (course) {
+                            html += `<div class="course-info">
+                                <div class="font-medium">${course.course}</div>
+                                <div class="text-sm text-gray-500">${course.teacher}</div>`;
+                            if (isEvaluated) {
+                                html += '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 ml-2"><i class="fas fa-check-circle mr-1"></i>已评价</span>';
+                            }
+                            html += '</div>';
+                        } else {
+                            html += '<div class="text-gray-400">无课程</div>';
+                        }
+                        
+                        html += '</td>';
+                    });
+                    
+                    html += '</tr>';
+                });
+                
+                html += '</table>';
+                courseScheduleEl.innerHTML = html;
+
+                // 添加课程单元格点击事件
+                document.querySelectorAll('.course-cell').forEach(cell => {
+                    cell.addEventListener('click', function() {
+                        const day = this.dataset.day;
+                        const time = this.dataset.time;
+                        const course = this.dataset.course;
+                        const teacher = this.dataset.teacher;
+                        
+                        if (course) {
+                            // 更新当前选中的星期
+                            currentDay = day;
+                            dayButtons.forEach(btn => {
+                                if (btn.dataset.day === day) {
+                                    btn.classList.add('bg-blue-700');
+                                } else {
+                                    btn.classList.remove('bg-blue-700');
+                                }
+                            });
+                            
+                            // 选择课程
+                            selectCourse(time, course, teacher);
+                        }
+                    });
+                });
+            }
+
+            function selectCourse(time, course, teacher) {
+                currentCourse = {
+                    day: currentDay,
+                    time: time,
+                    course: course,
+                    teacher: teacher
+                };
+
+                // Update current course info
+                currentTimeEl.textContent = time;
+                currentCourseEl.textContent = course;
+                currentTeacherEl.textContent = teacher;
+
+                // Load goals based on course
+                loadGoalsForCourse(course);
+
+                // Render evaluation table
+                renderEvaluationTable();
+
+                // Highlight selected course
+                document.querySelectorAll('.course-cell').forEach(cell => {
+                    cell.classList.remove('bg-blue-100');
+                });
+                document.querySelector(`.course-cell[data-day="${currentDay}"][data-time="${time}"][data-course="${course}"]`).classList.add('bg-blue-100');
+
+                // Load saved evaluation data if available
+                const courseKey = `${currentDay}_${time}_${course}`;
+                if (evaluationData[courseKey]) {
+                    loadEvaluationData(courseKey);
+                } else {
+                    // Reset evaluation
+                    selectedStudents.clear();
+                    renderEvaluationTable();
+                }
+            }
+
+            // Goals Management
+            function loadGoalsForCourse(course) {
+                if (courseCriteria[course]) {
+                    currentGoals = [...courseCriteria[course]];
+                } else {
+                    currentGoals = [...defaultCriteria];
+                }
+                renderGoals();
+            }
+
+            function renderGoals() {
+                if (!currentGoals.length) {
+                    goalsListEl.innerHTML = '<div class="text-gray-500 italic text-center py-2">请添加课堂目标</div>';
+                    return;
+                }
+
+                let html = '';
+                currentGoals.forEach((goal, index) => {
+                    html += `
+                    <div class="goal-row flex items-center py-1">
+                        <div class="flex-grow editable-content" contenteditable="true" data-index="${index}">${goal}</div>
+                        <button class="delete-goal text-red-500 hover:text-red-700 ml-2" data-index="${index}">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>`;
+                });
+                goalsListEl.innerHTML = html;
+
+                // Add event listeners for goal editing
+                document.querySelectorAll('.editable-content').forEach(el => {
+                    el.addEventListener('blur', function() {
+                        const index = parseInt(this.dataset.index);
+                        currentGoals[index] = this.textContent.trim();
+                        renderEvaluationTable();
+                    });
+                    el.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            this.blur();
+                        }
+                    });
+                });
+
+                // Add delete goal event listeners
+                document.querySelectorAll('.delete-goal').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const index = parseInt(this.dataset.index);
+                        currentGoals.splice(index, 1);
+                        renderGoals();
+                        renderEvaluationTable();
+                    });
+                });
+
+                // Update evaluation table headers
+                renderEvaluationTable();
+            }
+
+            function addNewGoal() {
+                currentGoals.push("新目标");
+                renderGoals();
+                // Focus on the new goal for editing
+                const newGoalEl = document.querySelectorAll('.editable-content')[currentGoals.length - 1];
+                newGoalEl.focus();
+                // Select all text
+                const range = document.createRange();
+                range.selectNodeContents(newGoalEl);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+
+            // Evaluation Table
+            function renderEvaluationTable() {
+                // Update table headers
+                const headerRow = evaluationTableEl.querySelector('thead tr');
+                const staticHeaderCount = 3; // 学生, 图片记录, 备注
+                
+                // Clear existing dynamic goal columns only
+                while (headerRow.children.length > staticHeaderCount) {
+                    // Remove the second child until only static headers remain
+                    headerRow.removeChild(headerRow.children[1]); 
+                }
+                
+                // Add new goal headers before the '图片记录' column (which is the second to last)
+                const photoHeader = headerRow.children[headerRow.children.length - 2];
+                currentGoals.forEach((goal, index) => {
+                    const th = document.createElement('th');
+                    th.className = 'border px-4 py-2 text-center goal-column text-black'; // Changed text color to black
+                    th.innerHTML = `${goal}
+                        <button class="batch-apply" onclick="showBatchApplyMenu(this, 'goal1')">
+                            <i class="fas fa-bolt"></i>
+                        </button>`;
+                    th.dataset.goal = index;
+                    headerRow.insertBefore(th, photoHeader);
+                });
+
+                // Ensure static headers have correct text and styling
+                const headers = headerRow.querySelectorAll('th');
+                if (headers.length >= 3) {
+                    headers[0].textContent = '学生姓名'; // Update student header text if needed
+                    headers[0].className = 'border px-4 py-2 text-left font-bold text-black'; // Added font-bold and text-black
+                    headers[headers.length - 2].textContent = '图片记录';
+                    headers[headers.length - 2].className = 'border px-4 py-2 text-center text-black'; // Changed text color to black
+                    headers[headers.length - 1].textContent = '添加本课备注';
+                    headers[headers.length - 1].className = 'border px-4 py-2 text-left text-black'; // Changed text color to black
+                }
+
+                // Render student rows
+                let tableBody = '';
+                students.forEach(student => {
+                    const isActive = selectedStudents.has(student);
+                    const rowClass = isActive ? '' : 'student-inactive';
+                    
+                    tableBody += `<tr class="student-row ${rowClass}" data-student="${student}">`;
+                    tableBody += `<td class="student-col border px-4 py-2 student-name">${student}</td>`;
+                    
+                    // Add goal cells
+                    currentGoals.forEach((goal, index) => {
+                        tableBody += `
+                        <td class="border px-2 py-2 text-center evaluation-cell goal-column" data-goal="${index}">
+                            <div class="flex items-center justify-center px-1">
+                                <span class="evaluation-btn bg-green-500" data-value="完成"></span>
+                                <span class="evaluation-btn bg-yellow-500" data-value="协助下完成"></span>
+                                <span class="evaluation-btn bg-red-500" data-value="部分完成"></span>
+                                <span class="evaluation-btn bg-gray-400" data-value="未完成"></span>
+                            </div>
+                        </td>`;
+                    });
+                    
+                    // Photo cell
+                    tableBody += `
+                    <td class="photo-col border px-2 py-2 text-center">
+                        <button class="upload-photo text-blue-500 hover:text-blue-700 photo-button" data-student="${student}">
+                            <i class="fas fa-camera"></i>
+                        </button>
+                        <button class="view-photo text-green-500 hover:text-green-700 ml-2 hidden photo-button" data-student="${student}">
+                            <i class="fas fa-image"></i>
+                        </button>
+                    </td>`;
+                    
+                    // Comment cell with quick comment template
+                    tableBody += `
+                    <td class="comment-col border px-2 py-2 relative">
+                        <div class="flex items-start">
+                            <textarea class="comment-text w-full p-1 border rounded" rows="2" placeholder="添加备注..." ${isActive ? '' : 'disabled'}></textarea>
+                            <div class="ml-1">
+                                <button class="comment-btn text-blue-500 hover:text-blue-700">
+                                    <i class="fas fa-comment-dots"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="quick-comments-list hidden absolute right-0 top-full bg-white border rounded shadow-lg p-2 z-10 w-56">
+                            ${quickComments.map(comment => 
+                                `<div class="quick-comment py-1 px-2 text-sm cursor-pointer hover:bg-blue-50 rounded">${comment}</div>`
+                            ).join('')}
+                            <div class="border-t my-1"></div>
+                            <div class="quick-comment py-1 px-2 text-sm cursor-pointer hover:bg-blue-50 rounded text-blue-600">
+                                <i class="fas fa-plus-circle mr-1"></i> 管理评语模板
+                            </div>
+                        </div>
+                    </td>`;
+                    
+                    tableBody += '</tr>';
+                });
+                
+                evaluationBodyEl.innerHTML = tableBody;
+
+                // Add event listeners
+                // Student selection
+                document.querySelectorAll('.student-name').forEach(el => {
+                    el.addEventListener('click', function() {
+                        const student = this.parentElement.dataset.student;
+                        toggleStudentSelection(student);
+                    });
+                });
+
+                // Evaluation buttons
+                document.querySelectorAll('.evaluation-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const studentRow = this.closest('tr');
+                        const student = studentRow.dataset.student;
+                        
+                        // Only allow evaluation for selected students
+                        if (!selectedStudents.has(student)) {
+                            return;
+                        }
+
+                        const goalCell = this.closest('td');
+                        const goalIndex = goalCell.dataset.goal;
+                        const value = this.dataset.value;
+
+                        // Toggle selection
+                        if (this.classList.contains('selected')) {
+                            this.classList.remove('selected');
+                        } else {
+                            // Clear other selections in same cell
+                            goalCell.querySelectorAll('.evaluation-btn').forEach(b => {
+                                b.classList.remove('selected');
+                            });
+                            this.classList.add('selected');
+                        }
+
+                        updateStatistics();
+                    });
+                });
+
+                // Batch apply buttons
+                document.querySelectorAll('.batch-apply').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        const goalHeader = this.closest('th');
+                        const goalIndex = goalHeader.dataset.goal;
+                        
+                        // Create a mini dialog box
+                        const dialog = document.createElement('div');
+                        dialog.className = 'batch-apply-menu absolute z-50 bg-white shadow-lg rounded-md p-2';
+                        
+                        // Position the dialog below the button
+                        const rect = this.getBoundingClientRect();
+                        dialog.style.top = `${rect.bottom + window.scrollY}px`;
+                        dialog.style.left = `${rect.left + window.scrollX}px`;
+                        
+                        dialog.innerHTML = `
+                            <div class="text-sm font-medium mb-1">批量应用评价</div>
+                            <div class="flex space-x-1 mb-1">
+                                <button class="batch-btn bg-green-500 w-6 h-6 rounded-full" data-value="完成"></button>
+                                <button class="batch-btn bg-yellow-500 w-6 h-6 rounded-full" data-value="协助下完成"></button>
+                                <button class="batch-btn bg-red-500 w-6 h-6 rounded-full" data-value="部分完成"></button>
+                                <button class="batch-btn bg-gray-400 w-6 h-6 rounded-full" data-value="未完成"></button>
+                                <button class="batch-btn bg-white border w-6 h-6 rounded-full" data-value="clear">×</button>
+                            </div>
+                            <button class="text-xs text-gray-500 cancel-batch">取消</button>
+                        `;
+                        
+                        // Remove any existing dialogs
+                        document.querySelectorAll('.batch-apply-menu').forEach(d => d.remove());
+                        document.body.appendChild(dialog);
+                        
+                        // Add event listeners to batch buttons
+                        dialog.querySelectorAll('.batch-btn').forEach(batchBtn => {
+                            batchBtn.addEventListener('click', function() {
+                                const value = this.dataset.value;
+                                
+                                // Apply to all selected students
+                                selectedStudents.forEach(student => {
+                                    const studentRow = document.querySelector(`tr[data-student="${student}"]`);
+                                    if (!studentRow) return;
+                                    
+                                    const targetCell = studentRow.querySelector(`td[data-goal="${goalIndex}"]`);
+                                    if (!targetCell) return;
+                                    
+                                    const buttons = targetCell.querySelectorAll('.evaluation-btn');
+                                    buttons.forEach(b => b.classList.remove('selected'));
+                                    
+                                    if (value !== 'clear') {
+                                        const targetBtn = targetCell.querySelector(`.evaluation-btn[data-value="${value}"]`);
+                                        if (targetBtn) targetBtn.classList.add('selected');
+                                    }
+                                });
+                                
+                                dialog.remove();
+                                updateStatistics();
+                            });
+                        });
+                        
+                        // Cancel button
+                        dialog.querySelector('.cancel-batch').addEventListener('click', function() {
+                            dialog.remove();
+                        });
+                        
+                        // Close when clicking outside
+                        const closeMenu = (e) => {
+                            if (!dialog.contains(e.target) && e.target !== btn) {
+                                dialog.remove();
+                                document.removeEventListener('click', closeMenu);
+                            }
+                        };
+                        document.addEventListener('click', closeMenu);
+                        
+                        // Stop propagation to prevent immediate closing
+                        e.stopPropagation();
+                    });
+                });
+
+                // Comment buttons
+                document.querySelectorAll('.comment-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const commentsList = this.closest('td').querySelector('.quick-comments-list');
+                        // Close all other comment lists
+                        document.querySelectorAll('.quick-comments-list').forEach(list => {
+                            if (list !== commentsList) list.classList.add('hidden');
+                        });
+                        commentsList.classList.toggle('hidden');
+                    });
+                });
+
+                // Quick comment selection
+                document.querySelectorAll('.quick-comment').forEach(comment => {
+                    comment.addEventListener('click', function() {
+                        const commentText = this.textContent.trim();
+                        if (commentText.includes('管理评语模板')) {
+                            // TODO: Implement comment template management
+                            showCommentManager();
+                        } else {
+                            const textarea = this.closest('td').querySelector('textarea');
+                            textarea.value = commentText;
+                            this.closest('.quick-comments-list').classList.add('hidden');
+                        }
+                    });
+                });
+
+                // Photo upload
+                document.querySelectorAll('.upload-photo').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const student = this.dataset.student;
+                        if (!selectedStudents.has(student)) return;
+                        showPhotoUploader(student);
+                    });
+                });
+
+                // Photo view
+                document.querySelectorAll('.view-photo').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const student = this.dataset.student;
+                        showPhoto(student);
+                    });
+                });
+
+                // Show existing photos
+                for (const student in photoData) {
+                    const photoBtn = document.querySelector(`.view-photo[data-student="${student}"]`);
+                    const courseKey = getCurrentCourseKey();
+                    if (photoBtn && photoData[student][courseKey] && 
+                        Array.isArray(photoData[student][courseKey]) && 
+                        photoData[student][courseKey].length > 0) {
+                        photoBtn.classList.remove('hidden');
+                        // 添加照片数量提示
+                        const photoCount = photoData[student][courseKey].length;
+                        if (photoCount > 0) {
+                            // 移除旧的角标（如果存在）
+                            const existingBadge = photoBtn.querySelector('.photo-badge');
+                            if (existingBadge) {
+                                photoBtn.removeChild(existingBadge);
+                            }
+                            
+                            const countBadge = document.createElement('span');
+                            countBadge.className = 'photo-badge';
+                            countBadge.textContent = photoCount;
+                            photoBtn.appendChild(countBadge);
+                        }
+                    }
+                }
+
+                // Close quick comments when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!e.target.closest('.comment-btn') && !e.target.closest('.quick-comments-list')) {
+                        document.querySelectorAll('.quick-comments-list').forEach(list => {
+                            list.classList.add('hidden');
+                        });
+                    }
+                });
+
+                updateStatistics();
+            }
+
+            // Student Selection
+            function toggleStudentSelection(student) {
+                const studentRow = document.querySelector(`tr[data-student="${student}"]`);
+                if (!studentRow) return;
+
+                if (selectedStudents.has(student)) {
+                    selectedStudents.delete(student);
+                    
+                    // Clear evaluations in UI
+                    studentRow.querySelectorAll('.evaluation-btn.selected').forEach(btn => {
+                        btn.classList.remove('selected');
+                    });
+                    
+                    // Clear remarks in UI
+                    const remarksTextarea = studentRow.querySelector('textarea');
+                    if (remarksTextarea) {
+                        remarksTextarea.value = '';
+                    }
+
+                    // Clear photo icon state in UI
+                    const photoCell = studentRow.querySelector('td:nth-last-child(2)'); // Assuming photo is second to last column
+                    const photoIcon = photoCell ? photoCell.querySelector('i.fa-camera') : null;
+                    if (photoIcon) {
+                        photoIcon.classList.remove('text-blue-500'); // Remove highlight or other indicator
+                    }
+
+                    // Clear data in evaluationData
+                    const courseKey = getCurrentCourseKey();
+                    if (courseKey && evaluationData[courseKey] && evaluationData[courseKey].evaluations && evaluationData[courseKey].evaluations[student]) {
+                        const studentEval = evaluationData[courseKey].evaluations[student];
+                        // Clear goal evaluations
+                        if (studentEval.goals) {
+                            Object.keys(studentEval.goals).forEach(goalIndex => {
+                                studentEval.goals[goalIndex] = null; 
+                            });
+                        }
+                        // Clear remarks
+                        studentEval.remarks = '';
+                        // Clear photo data
+                        studentEval.photo = null; 
+                        
+                        // Consider if immediate save is desired upon deselection
+                        // saveData(); // Might be better to save explicitly via Save button
+                    }
+
+                } else {
+                    selectedStudents.add(student);
+                }
+                
+                // Update UI appearance and statistics
+                updateStudentSelection(); // Handles row appearance and textarea state
+                updateStatistics(); // Recalculates stats
+            }
+
+            function selectAllStudents() {
+                students.forEach(student => {
+                    selectedStudents.add(student);
+                });
+                updateStudentSelection();
+            }
+
+            function deselectAllStudents() {
+                selectedStudents.clear();
+                updateStudentSelection();
+                updateStatistics();
+            }
+
+            function updateStudentSelection() {
+                document.querySelectorAll('.student-row').forEach(row => {
+                    const student = row.dataset.student;
+                    if (selectedStudents.has(student)) {
+                        row.classList.remove('student-inactive');
+                        row.querySelector('textarea').disabled = false;
+                    } else {
+                        row.classList.add('student-inactive');
+                        row.querySelector('textarea').disabled = true;
+                    }
+                });
+            }
+
+            // Statistics
+            function updateStatistics() {
+                let completed = 0;
+                let assisted = 0;
+                let partial = 0;
+                let incomplete = 0;
+                let total = 0;
+                
+                selectedStudents.forEach(student => {
+                    const row = document.querySelector(`tr[data-student="${student}"]`);
+                    if (!row) return;
+                    
+                    row.querySelectorAll('.evaluation-cell').forEach(cell => {
+                        const selectedBtn = cell.querySelector('.selected');
+                        if (selectedBtn) {
+                            const value = selectedBtn.dataset.value;
+                            if (value === '完成') completed++;
+                            else if (value === '协助下完成') assisted++;
+                            else if (value === '部分完成') partial++;
+                            else if (value === '未完成') incomplete++;
+                            total++;
+                        }
+                    });
+                });
+                
+                // Update count display
+                completedCountEl.textContent = completed;
+                assistedCountEl.textContent = assisted;
+                partialCountEl.textContent = partial;
+                incompleteCountEl.textContent = incomplete;
+                
+                // Update progress bars
+                if (total > 0) {
+                    completedBarEl.style.width = `${(completed / total) * 100}%`;
+                    assistedBarEl.style.width = `${(assisted / total) * 100}%`;
+                    partialBarEl.style.width = `${(partial / total) * 100}%`;
+                    incompleteBarEl.style.width = `${(incomplete / total) * 100}%`;
+                } else {
+                    completedBarEl.style.width = '0%';
+                    assistedBarEl.style.width = '0%';
+                    partialBarEl.style.width = '0%';
+                    incompleteBarEl.style.width = '0%';
+                }
+            }
+
+            // Data Management
+            function getCurrentCourseKey() {
+                if (!currentCourse) return null;
+                return `${currentCourse.day}_${currentCourse.time}_${currentCourse.course}`;
+            }
+
+            function saveEvaluation() {
+                if (!currentCourse) {
+                    showNotification('请先选择课程', 'error');
+                    return;
+                }
+                
+                const courseKey = getCurrentCourseKey();
+                const data = {
+                    day: currentCourse.day,
+                    time: currentCourse.time,
+                    course: currentCourse.course,
+                    teacher: currentCourse.teacher,
+                    goals: [...currentGoals],
+                    students: {},
+                    savedAt: new Date().toISOString()
+                };
+                
+                // Collect evaluation data
+                students.forEach(student => {
+                    if (!selectedStudents.has(student)) return;
+                    
+                    const row = document.querySelector(`tr[data-student="${student}"]`);
+                    if (!row) return;
+                    
+                    const studentData = {
+                        selected: true,
+                        evaluations: [],
+                        comment: row.querySelector('textarea').value
+                    };
+                    
+                    row.querySelectorAll('.evaluation-cell').forEach(cell => {
+                        const selectedBtn = cell.querySelector('.selected');
+                        studentData.evaluations.push(selectedBtn ? selectedBtn.dataset.value : null);
+                    });
+                    
+                    data.students[student] = studentData;
+                });
+                
+                // Save evaluation data
+                evaluationData[courseKey] = data;
+                localStorage.setItem('evaluationData', JSON.stringify(evaluationData));
+                
+                // Update UI to show saved status
+                renderCourseSchedule();
+                showNotification('评价已保存');
+            }
+
+            function loadEvaluationData(courseKey) {
+                const data = evaluationData[courseKey];
+                if (!data) return;
+                
+                // Load goals
+                currentGoals = [...data.goals];
+                renderGoals();
+                
+                // Load student selections and evaluations
+                selectedStudents.clear();
+                for (const student in data.students) {
+                    const studentData = data.students[student];
+                    if (studentData.selected) {
+                        selectedStudents.add(student);
+                    }
+                }
+                
+                renderEvaluationTable();
+                
+                // Apply saved evaluations
+                for (const student in data.students) {
+                    const studentData = data.students[student];
+                    const row = document.querySelector(`tr[data-student="${student}"]`);
+                    if (!row) continue;
+                    
+                    // Set comment
+                    const commentTextarea = row.querySelector('textarea');
+                    if (commentTextarea) {
+                        commentTextarea.value = studentData.comment || '';
+                    }
+                    
+                    // Set evaluations
+                    if (studentData.evaluations) {
+                        studentData.evaluations.forEach((value, index) => {
+                            if (!value) return;
+                            
+                            const cell = row.querySelector(`td[data-goal="${index}"]`);
+                            if (!cell) return;
+                            
+                            const btn = cell.querySelector(`.evaluation-btn[data-value="${value}"]`);
+                            if (btn) {
+                                btn.classList.add('selected');
+                            }
+                        });
+                    }
+                }
+                
+                updateStudentSelection();
+                updateStatistics();
+            }
+
+            function clearCurrentEvaluation() {
+                customConfirm('是否确认清除本周全部评价？', function(confirmed) {
+                    if (confirmed) {
+                        // 获取当前日期
+                        const today = new Date();
+                        const currentDay = today.getDay(); // 0是周日，1-6是周一到周六
+                        
+                        // 计算本周一的日期
+                        const monday = new Date(today);
+                        monday.setDate(today.getDate() - (currentDay === 0 ? 6 : currentDay - 1));
+                        
+                        // 计算本周日的日期
+                        const sunday = new Date(monday);
+                        sunday.setDate(monday.getDate() + 6);
+                        
+                        // 清除评价数据
+                        const keysToDelete = [];
+                        for (const courseKey in evaluationData) {
+                            const [day, time, course] = courseKey.split('_');
+                            // 检查是否是本周的课程
+                            if (day === '周一' || day === '周二' || day === '周三' || day === '周四' || day === '周五') {
+                                keysToDelete.push(courseKey);
+                            }
+                        }
+                        
+                        // 删除评价数据
+                        keysToDelete.forEach(key => {
+                            delete evaluationData[key];
+                        });
+                        localStorage.setItem('evaluationData', JSON.stringify(evaluationData));
+
+                        // 清除对应的图片数据
+                        const currentPhotoData = JSON.parse(localStorage.getItem('photoData') || '{}');
+                        let photosChanged = false;
+                        for (const student in currentPhotoData) {
+                            keysToDelete.forEach(keyToDelete => {
+                                if (currentPhotoData[student] && currentPhotoData[student][keyToDelete]) {
+                                    delete currentPhotoData[student][keyToDelete];
+                                    photosChanged = true;
+                                }
+                            });
+                            // 如果学生没有任何图片记录了，删除该学生条目
+                            if (currentPhotoData[student] && Object.keys(currentPhotoData[student]).length === 0) {
+                                delete currentPhotoData[student];
+                                photosChanged = true;
+                            }
+                        }
+                        if (photosChanged) {
+                            localStorage.setItem('photoData', JSON.stringify(currentPhotoData));
+                            // 更新全局 photoData 变量
+                            photoData = currentPhotoData;
+                        }
+                        
+                        // 重置UI
+                        selectedStudents.clear();
+                        renderEvaluationTable();
+                        renderCourseSchedule(); // 重新渲染课程表以更新标记
+                        showNotification('已清除本周全部评价');
+                    }
+                });
+            }
+
+            function loadData() {
+                // Load evaluation data
+                const savedEvaluation = localStorage.getItem('evaluationData');
+                if (savedEvaluation) {
+                    try {
+                        evaluationData = JSON.parse(savedEvaluation);
+                    } catch (e) {
+                        console.error('Error loading evaluation data:', e);
+                        evaluationData = {};
+                    }
+                }
+                
+                // Load photo data
+                const savedPhotos = localStorage.getItem('photoData');
+                if (savedPhotos) {
+                    try {
+                        photoData = JSON.parse(savedPhotos);
+                    } catch (e) {
+                        console.error('Error loading photo data:', e);
+                        photoData = {};
+                    }
+                }
+                
+                // Load schedule
+                const savedSchedule = localStorage.getItem('courseSchedule');
+                if (savedSchedule) {
+                    try {
+                        schedule = JSON.parse(savedSchedule);
+                    } catch (e) {
+                        console.error('Error loading schedule:', e);
+                    }
+                }
+                
+                // Load students
+                const savedStudents = localStorage.getItem('students');
+                if (savedStudents) {
+                    try {
+                        students = JSON.parse(savedStudents);
+                    } catch (e) {
+                        console.error('Error loading students:', e);
+                    }
+                }
+                
+                // Load quick comments
+                const savedComments = localStorage.getItem('quickComments');
+                if (savedComments) {
+                    try {
+                        quickComments = JSON.parse(savedComments);
+                    } catch (e) {
+                        console.error('Error loading quick comments:', e);
+                    }
+                }
+            }
+
+            // Export and Report
+            function exportData() {
+                if (Object.keys(evaluationData).length === 0) {
+                    showNotification('没有可导出的评价数据', 'error');
+                    return;
+                }
+                
+                // 创建Excel工作簿
+                const wb = XLSX.utils.book_new();
+                
+                // 收集所有评价数据
+                let allData = [];
+                
+                // 遍历所有课程的评价数据
+                for (const courseKey in evaluationData) {
+                    const data = evaluationData[courseKey];
+                    
+                    // 遍历每个目标
+                    data.goals.forEach((goal, goalIndex) => {
+                        // 遍历每个学生
+                        for (const student in data.students) {
+                            const studentData = data.students[student];
+                            if (!studentData.selected) continue;
+                            
+                            const evaluation = studentData.evaluations[goalIndex] || '未评价';
+                            const comment = studentData.comment || '';
+                            
+                            // 添加一行数据
+                            allData.push({
+                                '日期': data.day,
+                                '时间': data.time,
+                                '课程': data.course,
+                                '教师': data.teacher,
+                                '目标': goal,
+                                '学生': student,
+                                '评价': evaluation,
+                                '备注': comment
+                            });
+                        }
+                    });
+                }
+                
+                // 将数据转换为工作表
+                const ws = XLSX.utils.json_to_sheet(allData);
+                
+                // 设置列宽
+                const colWidths = [
+                    { wch: 10 }, // 日期
+                    { wch: 10 }, // 时间
+                    { wch: 15 }, // 课程
+                    { wch: 10 }, // 教师
+                    { wch: 20 }, // 目标
+                    { wch: 10 }, // 学生
+                    { wch: 10 }, // 评价
+                    { wch: 30 }  // 备注
+                ];
+                ws['!cols'] = colWidths;
+                
+                // 添加工作表到工作簿
+                XLSX.utils.book_append_sheet(wb, ws, "课堂评价数据");
+                
+                // 生成Excel文件
+                const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+                const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                
+                // 使用 File System Access API 保存文件
+                if ('showSaveFilePicker' in window) {
+                    window.showSaveFilePicker({
+                        suggestedName: `课堂评价数据_${new Date().toISOString().slice(0, 10)}.xlsx`,
+                        types: [{
+                            description: 'Excel Files',
+                            accept: {'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx']},
+                        }],
+                    }).then(handle => {
+                        handle.createWritable().then(writable => {
+                            writable.write(blob).then(() => {
+                                writable.close();
+                                showNotification('数据导出成功');
+                            });
+                        });
+                    }).catch(err => {
+                        if (err.name !== 'AbortError') {
+                            showNotification('导出失败: ' + err.message, 'error');
+                        }
+                    });
+                } else {
+                    // 降级处理：使用传统的下载方式
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `课堂评价数据_${new Date().toISOString().slice(0, 10)}.xlsx`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    showNotification('数据导出成功');
+                }
+            }
+
+            function generateReport() {
+                if (!currentCourse) {
+                    showNotification('请先选择课程', 'error');
+                    return;
+                }
+                
+                // In a real system, this would generate a more complex report
+                alert('报告生成功能尚在开发中');
+            }
+            
+            // 照片导出功能
+            function showPhotoExportModal() {
+                // 重置导出选项区域
+                document.getElementById('exportOptionsContainer').innerHTML = '<div class="text-gray-500 italic text-center py-4">请选择导出方式</div>';
+                document.getElementById('startExportBtn').classList.add('disabled');
+                
+                // 显示导出对话框
+                showModal(document.getElementById('photoExportModal'));
+            }
+            
+            // 按学生导出照片选项
+            function showExportByStudentOptions() {
+                const container = document.getElementById('exportOptionsContainer');
+                const photoDataExists = Object.keys(photoData).length > 0;
+                
+                if (!photoDataExists) {
+                    container.innerHTML = '<div class="text-red-500 text-center py-4">没有可导出的照片数据</div>';
+                    document.getElementById('startExportBtn').classList.add('disabled');
+                    return;
+                }
+                
+                let html = `
+                    <h4 class="font-medium text-gray-700 mb-2">选择学生</h4>
+                    <div class="max-h-60 overflow-y-auto border rounded p-2 mb-4">
+                `;
+                
+                // 获取所有有照片的学生
+                const studentsWithPhotos = Object.keys(photoData);
+                
+                // 添加全选选项
+                html += `
+                    <div class="mb-2">
+                        <label class="inline-flex items-center">
+                            <input type="checkbox" id="selectAllStudents" class="form-checkbox h-5 w-5 text-blue-600">
+                            <span class="ml-2 font-medium">全选</span>
+                        </label>
+                    </div>
+                    <hr class="my-2">
+                `;
+                
+                // 添加每个学生的选项
+                studentsWithPhotos.forEach(student => {
+                    // 计算该学生的照片总数
+                    let totalPhotos = 0;
+                    Object.keys(photoData[student]).forEach(courseKey => {
+                        if (Array.isArray(photoData[student][courseKey])) {
+                            totalPhotos += photoData[student][courseKey].length;
+                        }
+                    });
+                    
+                    html += `
+                        <div class="mb-2">
+                            <label class="inline-flex items-center">
+                                <input type="checkbox" name="exportStudent" value="${student}" class="form-checkbox h-5 w-5 text-blue-600 student-checkbox">
+                                <span class="ml-2">${student} <span class="text-gray-500 text-sm">(${totalPhotos}张照片)</span></span>
+                            </label>
+                        </div>
+                    `;
+                });
+                
+                html += `</div>`;
+                
+                container.innerHTML = html;
+                document.getElementById('startExportBtn').classList.remove('disabled');
+                
+                // 添加全选事件
+                document.getElementById('selectAllStudents').addEventListener('change', function() {
+                    const isChecked = this.checked;
+                    document.querySelectorAll('.student-checkbox').forEach(checkbox => {
+                        checkbox.checked = isChecked;
+                    });
+                });
+            }
+            
+            // 按学科导出照片选项
+            function showExportBySubjectOptions() {
+                const container = document.getElementById('exportOptionsContainer');
+                const photoDataExists = Object.keys(photoData).length > 0;
+                
+                if (!photoDataExists) {
+                    container.innerHTML = '<div class="text-red-500 text-center py-4">没有可导出的照片数据</div>';
+                    document.getElementById('startExportBtn').classList.add('disabled');
+                    return;
+                }
+                
+                // 收集所有课程信息
+                const subjects = new Map(); // 课程名称 -> {courseKeys: []}的映射
+                
+                // 遍历所有照片数据，按课程名称分组
+                for (const student in photoData) {
+                    for (const courseKey in photoData[student]) {
+                        if (!Array.isArray(photoData[student][courseKey]) || photoData[student][courseKey].length === 0) {
+                            continue;
+                        }
+                        
+                        const [day, time] = courseKey.split('_');
+                        let courseName = '未知课程';
+                        
+                        // 查找课程名称
+                        if (schedule[day]) {
+                            const courseInfo = schedule[day].find(c => c.time === time);
+                            if (courseInfo) {
+                                courseName = courseInfo.course;
+                            }
+                        }
+                        
+                        // 添加到学科映射
+                        if (!subjects.has(courseName)) {
+                            subjects.set(courseName, { courseKeys: [] });
+                        }
+                        
+                        if (!subjects.get(courseName).courseKeys.includes(courseKey)) {
+                            subjects.get(courseName).courseKeys.push(courseKey);
+                        }
+                    }
+                }
+                
+                let html = `
+                    <h4 class="font-medium text-gray-700 mb-2">选择学科</h4>
+                    <div class="max-h-60 overflow-y-auto border rounded p-2 mb-4">
+                `;
+                
+                // 添加全选选项
+                html += `
+                    <div class="mb-2">
+                        <label class="inline-flex items-center">
+                            <input type="checkbox" id="selectAllSubjects" class="form-checkbox h-5 w-5 text-blue-600">
+                            <span class="ml-2 font-medium">全选</span>
+                        </label>
+                    </div>
+                    <hr class="my-2">
+                `;
+                
+                // 添加每个学科的选项
+                subjects.forEach((data, subject) => {
+                    // 计算该学科的照片总数
+                    let totalPhotos = 0;
+                    data.courseKeys.forEach(courseKey => {
+                        for (const student in photoData) {
+                            if (photoData[student][courseKey] && Array.isArray(photoData[student][courseKey])) {
+                                totalPhotos += photoData[student][courseKey].length;
+                            }
+                        }
+                    });
+                    
+                    html += `
+                        <div class="mb-2">
+                            <label class="inline-flex items-center">
+                                <input type="checkbox" name="exportSubject" value="${subject}" class="form-checkbox h-5 w-5 text-blue-600 subject-checkbox" 
+                                       data-course-keys="${data.courseKeys.join(',')}">
+                                <span class="ml-2">${subject} <span class="text-gray-500 text-sm">(${totalPhotos}张照片)</span></span>
+                            </label>
+                        </div>
+                    `;
+                });
+                
+                html += `</div>`;
+                
+                container.innerHTML = html;
+                document.getElementById('startExportBtn').classList.remove('disabled');
+                
+                // 添加全选事件
+                document.getElementById('selectAllSubjects').addEventListener('change', function() {
+                    const isChecked = this.checked;
+                    document.querySelectorAll('.subject-checkbox').forEach(checkbox => {
+                        checkbox.checked = isChecked;
+                    });
+                });
+            }
+            
+            // 开始导出照片
+            function startExportPhotos() {
+                // 检查是按学生导出还是按学科导出
+                const studentCheckboxes = document.querySelectorAll('input[name="exportStudent"]:checked');
+                const subjectCheckboxes = document.querySelectorAll('input[name="exportSubject"]:checked');
+                
+                if (studentCheckboxes.length > 0) {
+                    // 按学生导出
+                    exportPhotosByStudent(Array.from(studentCheckboxes).map(cb => cb.value));
+                } else if (subjectCheckboxes.length > 0) {
+                    // 按学科导出
+                    const subjects = Array.from(subjectCheckboxes).map(cb => ({
+                        name: cb.value,
+                        courseKeys: cb.dataset.courseKeys.split(',')
+                    }));
+                    exportPhotosBySubject(subjects);
+                } else {
+                    showNotification('请选择至少一个导出选项', 'error');
+                }
+            }
+            
+            // 按学生导出照片
+            function exportPhotosByStudent(selectedStudents) {
+                // 创建一个ZIP文件
+                const zip = new JSZip();
+                let totalPhotos = 0;
+                
+                // 为每个学生创建一个文件夹
+                selectedStudents.forEach(student => {
+                    const studentFolder = zip.folder(student);
+                    
+                    // 遍历该学生的所有课程照片
+                    for (const courseKey in photoData[student]) {
+                        if (!Array.isArray(photoData[student][courseKey]) || photoData[student][courseKey].length === 0) {
+                            continue;
+                        }
+                        
+                        // 获取课程信息
+                        const [day, time] = courseKey.split('_');
+                        let courseName = '未知课程';
+                        let dateStr = day;
+                        
+                        // 查找课程名称
+                        if (schedule[day]) {
+                            const courseInfo = schedule[day].find(c => c.time === time);
+                            if (courseInfo) {
+                                courseName = courseInfo.course;
+                            }
+                        }
+                        
+                        // 为每个学科创建子文件夹
+                        const subjectFolder = studentFolder.folder(courseName);
+                        
+                        // 添加照片到对应学科文件夹
+                        photoData[student][courseKey].forEach((photoSrc, index) => {
+                            // 从Base64字符串提取图片数据
+                            const base64Data = photoSrc.split(',')[1];
+                            if (base64Data) {
+                                // 生成文件名: 日期_时间_序号.jpg
+                                const fileName = `${dateStr}_${time}_${index + 1}.jpg`;
+                                subjectFolder.file(fileName, base64Data, {base64: true});
+                                totalPhotos++;
+                            }
+                        });
+                    }
+                });
+                
+                if (totalPhotos === 0) {
+                    showNotification('没有找到可导出的照片', 'error');
+                    return;
+                }
+                
+                // 生成ZIP文件
+                zip.generateAsync({type: 'blob'}).then(function(content) {
+                    const fileName = `学生照片_${new Date().toISOString().slice(0, 10)}.zip`;
+                    
+                    // 使用 File System Access API 保存文件
+                    if ('showSaveFilePicker' in window) {
+                        window.showSaveFilePicker({
+                            suggestedName: fileName,
+                            types: [{
+                                description: 'ZIP Files',
+                                accept: {'application/zip': ['.zip']},
+                            }],
+                        }).then(handle => {
+                            handle.createWritable().then(writable => {
+                                writable.write(content).then(() => {
+                                    writable.close();
+                                    // 关闭导出对话框
+                                    document.getElementById('photoExportModal').classList.add('hidden');
+                                    showNotification(`成功导出${totalPhotos}张照片`);
+                                });
+                            });
+                        }).catch(err => {
+                            if (err.name !== 'AbortError') {
+                                showNotification('导出失败: ' + err.message, 'error');
+                            }
+                        });
+                    } else {
+                        // 降级处理：使用传统的下载方式
+                        const url = URL.createObjectURL(content);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = fileName;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        
+                        // 关闭导出对话框
+                        document.getElementById('photoExportModal').classList.add('hidden');
+                        showNotification(`成功导出${totalPhotos}张照片`);
+                    }
+                });
+            }
+            
+            // 按学科导出照片
+            function exportPhotosBySubject(subjects) {
+                // 创建一个ZIP文件
+                const zip = new JSZip();
+                let totalPhotos = 0;
+                
+                // 为每个学科创建一个文件夹
+                subjects.forEach(subject => {
+                    const subjectFolder = zip.folder(subject.name);
+                    
+                    // 遍历该学科的所有课程
+                    subject.courseKeys.forEach(courseKey => {
+                        // 获取课程信息
+                        const [day, time] = courseKey.split('_');
+                        const dateStr = day + '_' + time;
+                        
+                        // 为每个课程时间创建子文件夹
+                        const courseFolder = subjectFolder.folder(dateStr);
+                        
+                        // 遍历所有学生，查找该课程的照片
+                        for (const student in photoData) {
+                            if (!photoData[student][courseKey] || !Array.isArray(photoData[student][courseKey])) {
+                                continue;
+                            }
+                            
+                            // 添加照片到对应课程文件夹
+                            photoData[student][courseKey].forEach((photoSrc, index) => {
+                                // 从Base64字符串提取图片数据
+                                const base64Data = photoSrc.split(',')[1];
+                                if (base64Data) {
+                                    // 生成文件名: 学生姓名_序号.jpg
+                                    const fileName = `${student}_${index + 1}.jpg`;
+                                    courseFolder.file(fileName, base64Data, {base64: true});
+                                    totalPhotos++;
+                                }
+                            });
+                        }
+                    });
+                });
+                
+                if (totalPhotos === 0) {
+                    showNotification('没有找到可导出的照片', 'error');
+                    return;
+                }
+                
+                // 生成ZIP文件
+                zip.generateAsync({type: 'blob'}).then(function(content) {
+                    const fileName = `学科照片_${new Date().toISOString().slice(0, 10)}.zip`;
+                    
+                    // 使用 File System Access API 保存文件
+                    if ('showSaveFilePicker' in window) {
+                        window.showSaveFilePicker({
+                            suggestedName: fileName,
+                            types: [{
+                                description: 'ZIP Files',
+                                accept: {'application/zip': ['.zip']},
+                            }],
+                        }).then(handle => {
+                            handle.createWritable().then(writable => {
+                                writable.write(content).then(() => {
+                                    writable.close();
+                                    // 关闭导出对话框
+                                    document.getElementById('photoExportModal').classList.add('hidden');
+                                    showNotification(`成功导出${totalPhotos}张照片`);
+                                });
+                            });
+                        }).catch(err => {
+                            if (err.name !== 'AbortError') {
+                                showNotification('导出失败: ' + err.message, 'error');
+                            }
+                        });
+                    } else {
+                        // 降级处理：使用传统的下载方式
+                        const url = URL.createObjectURL(content);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = fileName;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        
+                        // 关闭导出对话框
+                        document.getElementById('photoExportModal').classList.add('hidden');
+                        showNotification(`成功导出${totalPhotos}张照片`);
+                    }
+                });
+            }
+
+            // Photo Management
+            function showPhotoUploader(student) {
+                const photoGalleryPreview = document.getElementById('photoGalleryPreview');
+                // Reset gallery to only show the drop zone
+                photoGalleryPreview.innerHTML = `
+                    <div id="photoDropZone" class="w-full h-40 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors">
+                        <i class="fas fa-plus text-gray-400 text-2xl mb-2"></i>
+                        <span class="text-gray-400">添加照片</span>
+                    </div>
+                `;
+                
+                const photoInput = document.getElementById('photoInput');
+                photoInput.value = '';
+                
+                // Store the student reference
+                uploadModal.dataset.student = student;
+                
+                // Check if we have existing photos
+                const courseKey = getCurrentCourseKey();
+                if (photoData[student] && photoData[student][courseKey] && Array.isArray(photoData[student][courseKey])) {
+                    // Display all existing photos
+                    photoData[student][courseKey].forEach((photoSrc, index) => {
+                        addPhotoToGallery(photoSrc, index);
+                    });
+                }
+                
+                // Show the upload modal
+                showModal(uploadModal);
+                
+                // Setup drop zone click handler
+                document.getElementById('photoDropZone').addEventListener('click', function() {
+                    photoInput.click();
+                });
+                
+                // Preview photos on selection
+                photoInput.addEventListener('change', function() {
+                    if (this.files && this.files.length > 0) {
+                        Array.from(this.files).forEach(file => {
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                // Add to preview gallery
+                                const nextIndex = document.querySelectorAll('#photoGalleryPreview .photo-preview-item').length;
+                                addPhotoToGallery(e.target.result, nextIndex);
+                            };
+                            reader.readAsDataURL(file);
+                        });
+                        // Reset input to allow selecting the same files again
+                        this.value = '';
+                    }
+                });
+            }
+            
+            // Helper function to add a photo to the gallery preview
+            function addPhotoToGallery(photoSrc, index) {
+                const photoGalleryPreview = document.getElementById('photoGalleryPreview');
+                const photoDropZone = document.getElementById('photoDropZone');
+                
+                const photoContainer = document.createElement('div');
+                photoContainer.className = 'photo-preview-item relative';
+                photoContainer.dataset.index = index;
+                
+                const img = document.createElement('img');
+                img.src = photoSrc;
+                img.className = 'h-40 w-full object-cover rounded-lg';
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600';
+                deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
+                deleteBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    photoContainer.remove();
+                });
+                
+                photoContainer.appendChild(img);
+                photoContainer.appendChild(deleteBtn);
+                
+                // Insert before the drop zone
+                photoGalleryPreview.insertBefore(photoContainer, photoDropZone);
+            }
+
+            function savePhoto() {
+                const student = uploadModal.dataset.student;
+                
+                // Get all photos from the gallery
+                const photoItems = document.querySelectorAll('#photoGalleryPreview .photo-preview-item img');
+                
+                if (photoItems.length === 0) {
+                    showNotification('请先添加照片', 'error');
+                    return;
+                }
+                
+                // Initialize student record if needed
+                if (!photoData[student]) {
+                    photoData[student] = {};
+                }
+                
+                // Save photo data as array
+                const courseKey = getCurrentCourseKey();
+                photoData[student][courseKey] = Array.from(photoItems).map(img => img.src);
+                
+                // Save to localStorage
+                localStorage.setItem('photoData', JSON.stringify(photoData));
+                
+                // Update UI
+                const photoBtn = document.querySelector(`.view-photo[data-student="${student}"]`);
+                if (photoBtn) {
+                    photoBtn.classList.remove('hidden');
+                }
+                
+                // Close modal
+                uploadModal.classList.add('hidden');
+                showNotification('照片已保存');
+            }
+
+            function showPhoto(student) {
+                const courseKey = getCurrentCourseKey();
+                if (photoData[student] && photoData[student][courseKey] && Array.isArray(photoData[student][courseKey]) && photoData[student][courseKey].length > 0) {
+                    const photoView = document.getElementById('photoView');
+                    const currentPhotoIndex = document.getElementById('currentPhotoIndex');
+                    const totalPhotos = document.getElementById('totalPhotos');
+                    
+                    // Set up photo carousel
+                    let currentIndex = 0;
+                    const photos = photoData[student][courseKey];
+                    
+                    // Update counter
+                    totalPhotos.textContent = photos.length;
+                    currentPhotoIndex.textContent = currentIndex + 1;
+                    
+                    // Show first photo
+                    photoView.src = photos[currentIndex];
+                    
+                    // Set up navigation buttons
+                    const prevBtn = document.getElementById('prevPhotoBtn');
+                    const nextBtn = document.getElementById('nextPhotoBtn');
+                    
+                    prevBtn.onclick = function() {
+                        currentIndex = (currentIndex - 1 + photos.length) % photos.length;
+                        photoView.src = photos[currentIndex];
+                        currentPhotoIndex.textContent = currentIndex + 1;
+                    };
+                    
+                    nextBtn.onclick = function() {
+                        currentIndex = (currentIndex + 1) % photos.length;
+                        photoView.src = photos[currentIndex];
+                        currentPhotoIndex.textContent = currentIndex + 1;
+                    };
+                    
+                    // 确保导航按钮和关闭按钮始终可见，即使只有一张照片
+                    prevBtn.classList.remove('hidden');
+                    nextBtn.classList.remove('hidden');
+                    document.querySelector('#photoModal .close-modal').style.display = 'block';
+                    
+                    showModal(photoModal);
+                }
+            }
+            
+            // Clear all photos for a student in current course
+            function clearPhotos() {
+                const student = uploadModal.dataset.student;
+                const courseKey = getCurrentCourseKey();
+                
+                if (photoData[student] && photoData[student][courseKey]) {
+                    // Remove photos from data
+                    photoData[student][courseKey] = [];
+                    localStorage.setItem('photoData', JSON.stringify(photoData));
+                    
+                    // Reset gallery to only show drop zone
+                    const photoGalleryPreview = document.getElementById('photoGalleryPreview');
+                    photoGalleryPreview.innerHTML = `
+                        <div id="photoDropZone" class="w-full h-40 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors">
+                            <i class="fas fa-plus text-gray-400 text-2xl mb-2"></i>
+                            <span class="text-gray-400">添加照片</span>
+                        </div>
+                    `;
+                    
+                    // Re-attach click handler to drop zone
+                    document.getElementById('photoDropZone').addEventListener('click', function() {
+                        document.getElementById('photoInput').click();
+                    });
+                    
+                    // Hide view button if no photos
+                    const photoBtn = document.querySelector(`.view-photo[data-student="${student}"]`);
+                    if (photoBtn) {
+                        photoBtn.classList.add('hidden');
+                        
+                        // 移除照片数量角标
+                        const existingBadge = photoBtn.querySelector('.photo-badge');
+                        if (existingBadge) {
+                            photoBtn.removeChild(existingBadge);
+                        }
+                    }
+                    
+                    showNotification('照片已清除');
+                }
+            }
+
+            // Student and Schedule Management
+            function showStudentManager() {
+                const studentListEditor = document.getElementById('studentListEditor');
+                studentListEditor.value = students.join('\n');
+                showModal(studentModal);
+            }
+
+            function saveStudentList() {
+                const studentListEditor = document.getElementById('studentListEditor');
+                const newStudents = studentListEditor.value
+                    .split('\n')
+                    .map(s => s.trim())
+                    .filter(s => s);
+                
+                if (newStudents.length === 0) {
+                    showNotification('学生名单不能为空', 'error');
+                    return;
+                }
+                
+                students = newStudents;
+                localStorage.setItem('students', JSON.stringify(students));
+                
+                // Rerender the evaluation table
+                renderEvaluationTable();
+                
+                // Close modal
+                studentModal.classList.add('hidden');
+                showNotification('学生名单已更新');
+            }
+
+            function showScheduleEditor() {
+                const tableBody = document.getElementById('scheduleTableBody');
+                tableBody.innerHTML = '';
+                
+                // 获取所有时间段
+                const timeSlots = new Set();
+                Object.values(schedule).forEach(daySchedule => {
+                    daySchedule.forEach(course => {
+                        timeSlots.add(course.time);
+                    });
+                });
+                
+                // 将时间段转换为数组并按实际时间排序
+                const sortedTimeSlots = Array.from(timeSlots).sort((a, b) => {
+                    // 提取开始时间（例如从 "8:15-8:50" 提取 "8:15"）
+                    const timeA = a.split('-')[0];
+                    const timeB = b.split('-')[0];
+                    
+                    // 将时间转换为分钟数进行比较
+                    const [hoursA, minutesA] = timeA.split(':').map(Number);
+                    const [hoursB, minutesB] = timeB.split(':').map(Number);
+                    
+                    const totalMinutesA = hoursA * 60 + minutesA;
+                    const totalMinutesB = hoursB * 60 + minutesB;
+                    
+                    return totalMinutesA - totalMinutesB;
+                });
+                
+                // 为每个时间段创建一行
+                sortedTimeSlots.forEach(timeSlot => {
+                    const row = document.createElement('tr');
+                    
+                    // 添加时间列（可编辑）
+                    const timeCell = document.createElement('td');
+                    timeCell.className = 'border px-4 py-2';
+                    const timeInput = document.createElement('input');
+                    timeInput.type = 'text';
+                    timeInput.className = 'w-full px-2 py-1 border rounded';
+                    timeInput.value = timeSlot;
+                    timeInput.dataset.originalTime = timeSlot;
+                    timeCell.appendChild(timeInput);
+                    row.appendChild(timeCell);
+                    
+                    // 添加每天的课程单元格
+                    ['周一', '周二', '周三', '周四', '周五'].forEach(day => {
+                        const cell = document.createElement('td');
+                        cell.className = 'border px-4 py-2 text-center cursor-pointer hover:bg-gray-50';
+                        cell.dataset.day = day;
+                        cell.dataset.time = timeSlot;
+                        
+                        // 查找并显示现有课程
+                        const existingCourse = findExistingCourse(day, timeSlot);
+                        if (existingCourse) {
+                            cell.innerHTML = `
+                                <div class="course-info">
+                                    <div class="font-medium">${existingCourse.course}</div>
+                                    <div class="text-sm text-gray-500">${existingCourse.teacher}</div>
+                                </div>
+                            `;
+                        } else {
+                            cell.innerHTML = '<div class="text-gray-400">点击添加课程</div>';
+                        }
+                        
+                        // 添加点击事件
+                        cell.addEventListener('click', () => showCourseEditModal(cell));
+                        
+                        row.appendChild(cell);
+                    });
+                    
+                    tableBody.appendChild(row);
+                });
+                
+                // 添加新增时间段按钮事件
+                document.getElementById('addTimeSlotBtn').addEventListener('click', function() {
+                    const row = document.createElement('tr');
+                    
+                    // 添加时间列（可编辑）
+                    const timeCell = document.createElement('td');
+                    timeCell.className = 'border px-4 py-2';
+                    const timeInput = document.createElement('input');
+                    timeInput.type = 'text';
+                    timeInput.className = 'w-full px-2 py-1 border rounded';
+                    timeInput.placeholder = '输入时间段';
+                    timeCell.appendChild(timeInput);
+                    row.appendChild(timeCell);
+                    
+                    // 添加每天的课程单元格
+                    ['周一', '周二', '周三', '周四', '周五'].forEach(day => {
+                        const cell = document.createElement('td');
+                        cell.className = 'border px-4 py-2 text-center cursor-pointer hover:bg-gray-50';
+                        cell.innerHTML = '<div class="text-gray-400">点击添加课程</div>';
+                        cell.addEventListener('click', () => showCourseEditModal(cell));
+                        row.appendChild(cell);
+                    });
+                    
+                    tableBody.appendChild(row);
+                });
+                
+                showModal(document.getElementById('scheduleModal'));
+            }
+
+            function findExistingCourse(day, timeSlot) {
+                if (!schedule[day]) return null;
+                return schedule[day].find(course => course.time === timeSlot);
+            }
+
+            // 当前编辑的单元格引用
+            let currentEditingCell = null;
+            
+            function showCourseEditModal(cell) {
+                const modal = document.getElementById('courseEditModal');
+                const courseNameInput = document.getElementById('courseNameInput');
+                const teacherNameInput = document.getElementById('teacherNameInput');
+                
+                // 保存当前编辑的单元格引用
+                currentEditingCell = cell;
+                
+                // 获取现有课程信息
+                const existingCourse = findExistingCourse(cell.dataset.day, cell.dataset.time);
+                if (existingCourse) {
+                    courseNameInput.value = existingCourse.course;
+                    teacherNameInput.value = existingCourse.teacher;
+                } else {
+                    courseNameInput.value = '';
+                    teacherNameInput.value = '';
+                }
+                
+                // 显示模态框
+                showModal(modal);
+                
+                // 保存按钮事件
+                document.getElementById('saveCourseEditBtn').onclick = () => {
+                    const courseName = courseNameInput.value.trim();
+                    const teacherName = teacherNameInput.value.trim();
+                    
+                    // 允许清空课程信息
+                    if (courseName === '' && teacherName === '') {
+                        // 如果课程名和教师名都为空，则删除该课程
+                        const courseIndex = schedule[cell.dataset.day]?.findIndex(
+                            course => course.time === cell.dataset.time
+                        );
+                        
+                        if (courseIndex !== -1 && courseIndex !== undefined) {
+                            schedule[cell.dataset.day].splice(courseIndex, 1);
+                            // 如果该天没有课程了，删除该天的数组
+                            if (schedule[cell.dataset.day].length === 0) {
+                                delete schedule[cell.dataset.day];
+                            }
+                        }
+                        
+                        // 更新单元格显示为空
+                        cell.innerHTML = '<div class="text-gray-400">点击添加课程</div>';
+                    } else if (!courseName) {
+                        showNotification('请输入课程名称', 'error');
+                        return;
+                    } else {
+                        // 更新课程信息
+                        if (!schedule[cell.dataset.day]) {
+                            schedule[cell.dataset.day] = [];
+                        }
+                        
+                        const courseIndex = schedule[cell.dataset.day].findIndex(
+                            course => course.time === cell.dataset.time
+                        );
+                        
+                        const courseInfo = {
+                            time: cell.dataset.time,
+                            course: courseName,
+                            teacher: teacherName
+                        };
+                        
+                        if (courseIndex === -1) {
+                            schedule[cell.dataset.day].push(courseInfo);
+                        } else {
+                            schedule[cell.dataset.day][courseIndex] = courseInfo;
+                        }
+                        
+                        // 更新单元格显示
+                        cell.innerHTML = `
+                            <div class="course-info">
+                                <div class="font-medium">${courseName}</div>
+                                <div class="text-sm text-gray-500">${teacherName}</div>
+                            </div>
+                        `;
+                    }
+                    
+                    // 保存到本地存储
+                    localStorage.setItem('courseSchedule', JSON.stringify(schedule));
+                    
+                    // 更新主界面显示
+                    renderCourseSchedule();
+                    
+                    // 关闭模态框
+                    modal.classList.add('hidden');
+                    
+                    // 显示成功通知
+                    showNotification('课程表已更新');
+                };
+                
+                // 取消按钮事件
+                document.getElementById('cancelCourseEditBtn').onclick = () => {
+                    modal.classList.add('hidden');
+                    currentEditingCell = null;
+                };
+            }
+
+            function saveSchedule() {
+                customConfirm('是否确认更新课程表？', function(confirmed) {
+                    if (confirmed) {
+                        try {
+                            const newSchedule = {};
+                            
+                            // 从表格中收集数据
+                            const rows = document.querySelectorAll('#scheduleTableBody tr');
+                            rows.forEach(row => {
+                                const timeInput = row.querySelector('input[type="text"]');
+                                const timeSlot = timeInput.value.trim();
+                                if (!timeSlot) return;
+                                
+                                const cells = row.querySelectorAll('td:not(:first-child)');
+                                cells.forEach((cell, index) => {
+                                    const day = ['周一', '周二', '周三', '周四', '周五'][index];
+                                    const courseInfo = cell.querySelector('.course-info');
+                                    
+                                    if (courseInfo) {
+                                        if (!newSchedule[day]) {
+                                            newSchedule[day] = [];
+                                        }
+                                        
+                                        const course = courseInfo.querySelector('.font-medium').textContent;
+                                        const teacher = courseInfo.querySelector('.text-sm').textContent;
+                                        
+                                        newSchedule[day].push({
+                                            time: timeSlot,
+                                            course: course,
+                                            teacher: teacher
+                                        });
+                                    }
+                                });
+                            });
+                            
+                            // 对每个天的课程按时间排序
+                            for (const day in newSchedule) {
+                                newSchedule[day].sort((a, b) => {
+                                    const timeA = a.time.split('-')[0];
+                                    const timeB = b.time.split('-')[0];
+                                    const [hoursA, minutesA] = timeA.split(':').map(Number);
+                                    const [hoursB, minutesB] = timeB.split(':').map(Number);
+                                    const totalMinutesA = hoursA * 60 + minutesA;
+                                    const totalMinutesB = hoursB * 60 + minutesB;
+                                    return totalMinutesA - totalMinutesB;
+                                });
+                            }
+                            
+                            // 更新全局课程表数据
+                            schedule = newSchedule;
+                            
+                            // 保存到本地存储
+                            localStorage.setItem('courseSchedule', JSON.stringify(schedule));
+                            
+                            // 更新主界面的课程表显示
+                            renderCourseSchedule();
+                            renderFullScheduleTable(); // 添加这行来更新编辑界面的显示
+                            
+                            // 关闭模态框
+                            document.getElementById('scheduleModal').classList.add('hidden');
+                            
+                            // 显示成功通知
+                            showNotification('课程表已更新');
+                        } catch (e) {
+                            showNotification('保存失败: ' + e.message, 'error');
+                        }
+                    }
+                });
+            }
+
+            // Comment Template Management
+            function showCommentManager() {
+                // Simple prompt for now - would be a modal in a full app
+                const newComment = prompt('输入新的评语模板:');
+                if (newComment && newComment.trim()) {
+                    quickComments.push(newComment.trim());
+                    localStorage.setItem('quickComments', JSON.stringify(quickComments));
+                    renderEvaluationTable();
+                    showNotification('评语模板已添加');
+                }
+            }
+
+            // UI Helpers
+            function showModal(modal) {
+                modal.classList.remove('hidden');
+            }
+            
+            // 自定义确认对话框，替代原生confirm
+            function customConfirm(message, callback) {
+                // 创建确认对话框元素
+                const confirmModal = document.createElement('div');
+                confirmModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                
+                const confirmBox = document.createElement('div');
+                confirmBox.className = 'bg-white rounded-lg shadow-xl p-6 max-w-md w-full text-center';
+                
+                const messageText = document.createElement('p');
+                messageText.className = 'text-xl mb-6';
+                messageText.textContent = message;
+                
+                const buttonContainer = document.createElement('div');
+                buttonContainer.className = 'flex justify-center space-x-4';
+                
+                const confirmBtn = document.createElement('button');
+                confirmBtn.className = 'bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg text-lg';
+                confirmBtn.textContent = '确认';
+                
+                const cancelBtn = document.createElement('button');
+                cancelBtn.className = 'bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-lg text-lg';
+                cancelBtn.textContent = '取消';
+                
+                buttonContainer.appendChild(confirmBtn);
+                buttonContainer.appendChild(cancelBtn);
+                
+                confirmBox.appendChild(messageText);
+                confirmBox.appendChild(buttonContainer);
+                confirmModal.appendChild(confirmBox);
+                
+                document.body.appendChild(confirmModal);
+                
+                // 绑定事件
+                confirmBtn.addEventListener('click', function() {
+                    document.body.removeChild(confirmModal);
+                    callback(true);
+                });
+                
+                cancelBtn.addEventListener('click', function() {
+                    document.body.removeChild(confirmModal);
+                    callback(false);
+                });
+            }
+
+            function showNotification(message, type = 'success') {
+                const notification = document.getElementById('notification');
+                const notificationText = document.getElementById('notificationText');
+                
+                // 设置通知内容
+                notificationText.textContent = message;
+                
+                // 设置通知类型样式
+                if (type === 'error') {
+                    notification.classList.remove('bg-green-500');
+                    notification.classList.add('bg-red-500');
+                } else {
+                    notification.classList.remove('bg-red-500');
+                    notification.classList.add('bg-green-500');
+                }
+                
+                // 显示通知
+                notification.classList.remove('translate-y-16', 'opacity-0');
+                
+                // 3秒后隐藏通知
+                setTimeout(() => {
+                    notification.classList.add('translate-y-16', 'opacity-0');
+                }, 3000);
+            }
+        });
+    </script>
+</body>
+</html>
